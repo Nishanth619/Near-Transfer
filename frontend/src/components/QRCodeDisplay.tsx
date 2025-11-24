@@ -48,9 +48,6 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
             size={240}
             color={COLORS.textPrimary}
             backgroundColor={COLORS.surface}
-            logo={require('../../assets/icon.png')}
-            logoSize={40}
-            logoBackgroundColor={COLORS.surface}
           />
         </View>
 
