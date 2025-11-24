@@ -1,28 +1,15 @@
 import { STUN_SERVERS } from '../../utils/constants';
 
-// Type definitions for WebRTC
-interface RTCConfiguration {
-  iceServers: Array<{ urls: string | string[] }>;
-}
-
-// Dynamic import for react-native-webrtc with fallback
-let RTCPeerConnection: any;
-let RTCSessionDescription: any;
-
-try {
-  const webrtc = require('react-native-webrtc');
-  RTCPeerConnection = webrtc.RTCPeerConnection;
-  RTCSessionDescription = webrtc.RTCSessionDescription;
-} catch (e) {
-  // Fallback for web or when WebRTC is not available
-  if (typeof window !== 'undefined') {
-    RTCPeerConnection = (window as any).RTCPeerConnection;
-    RTCSessionDescription = (window as any).RTCSessionDescription;
-  }
-}
+/**
+ * WebRTC Service for P2P File Transfer
+ * Note: This is a demo implementation. For production use with real devices:
+ * 1. Install react-native-webrtc using: npx expo install react-native-webrtc
+ * 2. Build a custom development client (won't work in Expo Go)
+ * 3. Configure native permissions for iOS/Android
+ */
 
 export class WebRTCService {
-  private peerConnection: RTCPeerConnection | null = null;
+  private peerConnection: any | null = null;
   private dataChannel: any = null;
   private onDataCallback: ((data: any) => void) | null = null;
   private onConnectionStateCallback: ((state: string) => void) | null = null;
