@@ -1,5 +1,25 @@
-import { RTCPeerConnection, RTCIceCandidate, RTCSessionDescription, mediaDevices } from 'react-native-webrtc';
 import { STUN_SERVERS } from '../../utils/constants';
+
+// Type definitions for WebRTC
+interface RTCConfiguration {
+  iceServers: Array<{ urls: string | string[] }>;
+}
+
+// Dynamic import for react-native-webrtc with fallback
+let RTCPeerConnection: any;
+let RTCSessionDescription: any;
+
+try {
+  const webrtc = require('react-native-webrtc');
+  RTCPeerConnection = webrtc.RTCPeerConnection;
+  RTCSessionDescription = webrtc.RTCSessionDescription;
+} catch (e) {
+  // Fallback for web or when WebRTC is not available
+  if (typeof window !== 'undefined') {
+    RTCPeerConnection = (window as any).RTCPeerConnection;
+    RTCSessionDescription = (window as any).RTCSessionDescription;
+  }
+}
 
 export class WebRTCService {
   private peerConnection: RTCPeerConnection | null = null;
