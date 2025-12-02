@@ -1,0 +1,225 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:animate_do/animate_do.dart';
+import 'package:go_router/go_router.dart';
+import '../../../shared/widgets/animated_background.dart';
+import '../../../shared/widgets/gradient_button.dart';
+import '../../../shared/widgets/file_card.dart';
+import '../../../core/constants.dart';
+import '../../../shared/providers/transfer_provider.dart';
+import '../../../shared/utils/network_helper.dart';
+
+class SendScreen extends StatelessWidget {
+  const SendScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text('Send Files', style: TextStyle(color: Colors.white)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline, color: Colors.white),
+            onPressed: () {
+              NetworkHelper.showNetworkSetupDialog(context, isSender: true);
+            },
+          ),
+        ],
+      ),
+      body: AnimatedBackground(
+        child: Consumer<TransferProvider>(
+          builder: (context, provider, child) {
+            return Column(
+              children: [
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: kToolbarHeight + 20),
+                    padding: const EdgeInsets.all(AppConstants.spacingLg),
+                    decoration: const BoxDecoration(
+                      color: AppColors.surfaceAlt,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(30),
+                        topRight: Radius.circular(30),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (provider.selectedFiles.isEmpty)
+                          Expanded(
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.folder_open,
+                                      size: 80, color: AppColors.primary.withOpacity(0.2)),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'No files selected',
+                                    style: TextStyle(
+                                      color: AppColors.muted,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  GradientButton(
+                                    text: 'Select Files',
+                                    icon: Icons.add,
+                                    onPressed: provider.pickFiles,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${provider.selectedFiles.length} files selected',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: provider.pickFiles,
+                                child: const Text('Add More'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: provider.selectedFiles.length,
+                              itemBuilder: (context, index) {
+                                final file = provider.selectedFiles[index];
+                                return FadeInUp(
+                                  delay: Duration(milliseconds: index * 100),
+                                  child: FileCard(
+                                    fileName: file.name,
+                                    fileSize: file.size,
+                                    onDelete: () => provider.removeFile(file),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (provider.connectionQrData == null)
+                            GradientButton(
+                              text: 'Generate QR Code',
+                              icon: Icons.qr_code,
+                              isLoading: provider.isGeneratingQR,
+                              onPressed: () {
+                                NetworkHelper.showConnectionCheckDialog(context, () async {
+                                  await provider.generateQRCode();
+                                });
+                              },
+                            )
+                          else
+                            Column(
+                              children: [
+                                Center(
+                                  child: FadeIn(
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(20),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withOpacity(0.1),
+                                                blurRadius: 20,
+                                              ),
+                                            ],
+                                          ),
+                                          child: QrImageView(
+                                            data: provider.connectionQrData!,
+                                            version: QrVersions.auto,
+                                            size: 200.0,
+                                            backgroundColor: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        const Text(
+                                          'Scan this QR code on the receiving device',
+                                          style: TextStyle(color: AppColors.muted),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                // Connection Status
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: provider.isConnected
+                                        ? Colors.green.withOpacity(0.1)
+                                        : Colors.orange.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: provider.isConnected ? Colors.green : Colors.orange,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        provider.isConnected ? Icons.check_circle : Icons.pending,
+                                        color: provider.isConnected ? Colors.green : Colors.orange,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          provider.isConnected
+                                              ? 'Connected! Ready to transfer'
+                                              : 'Waiting for receiver to scan QR...',
+                                          style: TextStyle(
+                                            color: provider.isConnected ? Colors.green : Colors.orange,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                if (provider.isConnected)
+                                  GradientButton(
+                                    text: 'Start Transfer',
+                                    icon: Icons.send,
+                                    isLoading: provider.isTransferring,
+                                    onPressed: () async {
+                                      // Navigate first, then start transfer
+                                      context.go('/sending');
+                                      await Future.delayed(const Duration(milliseconds: 100));
+                                      provider.startTransfer();
+                                    },
+                                  ),
+                              ],
+                            ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}

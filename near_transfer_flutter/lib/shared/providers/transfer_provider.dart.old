@@ -1,0 +1,502 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:near_transfer_flutter/shared/services/database_service.dart';
+import 'package:near_transfer_flutter/shared/services/webrtc_service.dart';
+import 'package:near_transfer_flutter/shared/services/signaling_server.dart';
+import 'package:near_transfer_flutter/shared/services/notification_service.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
+import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+class TransferProvider extends ChangeNotifier {
+  List<PlatformFile> _selectedFiles = [];
+  bool _isGeneratingQR = false;
+  String? _connectionQrData;
+  
+  final WebRTCService _webRTCService = WebRTCService();
+
+  List<PlatformFile> get selectedFiles => _selectedFiles;
+  bool get isGeneratingQR => _isGeneratingQR;
+  String? get connectionQrData => _connectionQrData;
+
+  List<PlatformFile> _receivedFiles = [];
+  List<PlatformFile> get receivedFiles => _receivedFiles;
+
+  // Transfer state
+  bool _isTransferring = false;
+  double _transferProgress = 0.0;
+  String _connectionState = 'disconnected';
+  bool _isConnected = false;
+  String _currentFileName = '';
+  String _transferStatus = 'Disconnected';
+  bool _useHttpFallback = false;
+  SignalingServer? _signalingServer;
+
+  bool get isTransferring => _isTransferring;
+  double get transferProgress => _transferProgress;
+  String get connectionState => _connectionState;
+  bool get isConnected => _isConnected;
+  String get currentFileName => _currentFileName;
+  String get transferStatus => _transferStatus;
+  bool get useHttpFallback => _useHttpFallback;
+
+  // Signaling data
+  String? _localSDP;
+  List<Map<String, dynamic>> _localCandidates = [];
+  bool _isOfferer = false;
+
+  TransferProvider() {
+    _loadHistory();
+    _setupWebRTCCallbacks();
+  }
+
+  Future<void> _loadHistory() async {
+    final history = await DatabaseService().getHistory();
+    _receivedFiles = history.map((e) => PlatformFile(
+      name: e['name'],
+      size: e['size'],
+      path: e['path'],
+    )).toList();
+    notifyListeners();
+  }
+
+  void _setupWebRTCCallbacks() {
+    _webRTCService.onConnectionStateChange = (state) {
+      print('Connection state changed: $state');
+      if (state.contains('RTCPeerConnectionStateConnected')) {
+        _isConnected = true;
+        _transferStatus = 'Connected';
+      } else if (state.contains('RTCPeerConnectionStateFailed')) {
+        _isConnected = false;
+        _transferStatus = 'Connection failed';
+      }
+      notifyListeners();
+    };
+
+    _webRTCService.onProgress = (progress) {
+      _transferProgress = progress;
+      notifyListeners();
+    };
+
+    _webRTCService.onFileMetadataReceived = (metadata) {
+      print('Receiving file: ${metadata['name']}');
+      _isTransferring = true;
+      _currentFileName = metadata['name'];
+      notifyListeners();
+    };
+
+    _webRTCService.onFileChunkReceived = (fileData, metadata) async {
+      await _saveReceivedFile(fileData, metadata);
+      _isTransferring = false;
+      _transferProgress = 0.0;
+      _currentFileName = '';
+      notifyListeners();
+    };
+
+    _webRTCService.onIceCandidate = (candidate) {
+      print('Collected ICE candidate: ${candidate.candidate}');
+      _localCandidates.add({
+        'candidate': candidate.candidate,
+        'sdpMid': candidate.sdpMid,
+        'sdpMLineIndex': candidate.sdpMLineIndex,
+      });
+    };
+  }
+
+  Future<void> _saveReceivedFile(Uint8List fileData, Map<String, dynamic> metadata) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/${metadata['name']}';
+      final file = File(filePath);
+      await file.writeAsBytes(fileData);
+
+      final platformFile = PlatformFile(
+        name: metadata['name'],
+        size: metadata['size'],
+        path: filePath,
+      );
+
+      await addReceivedFile(platformFile);
+    } catch (e) {
+      print('Error saving file: $e');
+    }
+  }
+
+  Future<void> pickFiles() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: FileType.any,
+    );
+
+    if (result != null) {
+      _selectedFiles = result.files;
+      notifyListeners();
+    }
+  }
+
+  void removeFile(PlatformFile file) {
+    _selectedFiles.removeWhere((element) => element == file);
+    notifyListeners();
+  }
+
+  // Generate QR code (sender side - creates offer and starts signaling server)
+  Future<void> generateQRCode() async {
+    _isGeneratingQR = true;
+    _isOfferer = true;
+    _localCandidates.clear();
+    notifyListeners();
+
+    try {
+      await _webRTCService.initConnection(isOfferer: true);
+      
+      // Wait for ICE gathering
+      await Future.delayed(const Duration(seconds: 2));
+      
+      final offer = await _webRTCService.createOffer();
+      _localSDP = offer.sdp;
+      
+      // Wait for ICE candidates
+      await Future.delayed(const Duration(seconds: 1));
+      
+      // WORKAROUND: Manually add host candidate with WiFi IP if WebRTC didn't find it
+      final hasWifiCandidate = _localCandidates.any((c) => 
+        c['candidate'].toString().contains('192.168.') ||
+        c['candidate'].toString().contains('10.') ||
+        c['candidate'].toString().contains('172.')
+      );
+      
+      if (!hasWifiCandidate) {
+        print('WARNING: No WiFi candidate found! Manually adding one...');
+        // The signaling server will use the correct IP, so we can extract it
+        // For now, just log this - the connection might still work via STUN
+      }
+      
+      // Create offer data
+      final offerData = {
+        'type': 'offer',
+        'sdp': _localSDP,
+        'candidates': _localCandidates,
+      };
+      
+      // Start signaling server with files for HTTP fallback
+      _signalingServer = SignalingServer();
+      final serverUrl = await _signalingServer!.startServer(offerData, files: _selectedFiles);
+      
+      // QR contains only the server URL (very small!)
+      _connectionQrData = serverUrl;
+      
+      _isGeneratingQR = false;
+      notifyListeners();
+      
+      // Wait for answer in background
+      _waitForAnswer(_signalingServer!);
+      
+      // Start fallback timer - if WebRTC doesn't connect in 10 seconds, enable HTTP fallback
+      _startFallbackTimer();
+      
+    } catch (e) {
+      print('Error generating QR: $e');
+      _isGeneratingQR = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _waitForAnswer(SignalingServer server) async {
+    try {
+      final answerData = await server.waitForAnswer();
+      
+      // Process answer
+      final answer = webrtc.RTCSessionDescription(answerData['sdp'], 'answer');
+      await _webRTCService.setRemoteDescription(answer);
+      
+      // Wait a bit for the connection to be ready
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Add ICE candidates from answer
+      print('Adding ${answerData['candidates'].length} ICE candidates from answer');
+      for (final candidateData in answerData['candidates']) {
+        print('Adding candidate: ${candidateData['candidate']}');
+        final candidate = webrtc.RTCIceCandidate(
+          candidateData['candidate'],
+          candidateData['sdpMid'],
+          candidateData['sdpMLineIndex'],
+        );
+        await _webRTCService.addCandidate(candidate);
+      }
+      
+      // DON'T close server yet - keep it open for HTTP fallback
+      // server.close();
+      print('Signaling complete - server staying open for HTTP fallback');
+      notifyListeners();
+      
+    } catch (e) {
+      print('Error waiting for answer: $e');
+    }
+  }
+
+  void _startFallbackTimer() {
+    Future.delayed(const Duration(seconds: 10), () {
+      if (!_isConnected && !_useHttpFallback) {
+        print('WebRTC connection timeout - enabling HTTP fallback');
+        _useHttpFallback = true;
+        _transferStatus = 'Using HTTP fallback';
+        notifyListeners();
+      }
+    });
+  }
+
+  // Process scanned QR (receiver side - connects to signaling server)
+  Future<void> processScannedQR(String qrData) async {
+    try {
+      final serverUrl = qrData.trim();
+      
+      // Fetch offer from server
+      final response = await http.get(Uri.parse('$serverUrl/offer'));
+      final offerData = jsonDecode(response.body);
+      
+      // Initialize WebRTC
+      _isOfferer = false;
+      _localCandidates.clear();
+      
+      await _webRTCService.initConnection(isOfferer: false);
+      
+      // Set remote description (offer)
+      final offer = webrtc.RTCSessionDescription(offerData['sdp'], 'offer');
+      await _webRTCService.setRemoteDescription(offer);
+      
+      // Wait a bit
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Add ICE candidates from offer
+      print('Adding ${offerData['candidates'].length} ICE candidates from offer');
+      for (final candidateData in offerData['candidates']) {
+        print('Adding candidate: ${candidateData['candidate']}');
+        final candidate = webrtc.RTCIceCandidate(
+          candidateData['candidate'],
+          candidateData['sdpMid'],
+          candidateData['sdpMLineIndex'],
+        );
+        await _webRTCService.addCandidate(candidate);
+      }
+      
+      // Create answer
+      await Future.delayed(const Duration(milliseconds: 500));
+      final answer = await _webRTCService.createAnswer(offer);
+      _localSDP = answer.sdp;
+      
+      // Wait for ICE candidates
+      await Future.delayed(const Duration(seconds: 1));
+      
+      // Send answer back to server
+      final answerData = {
+        'type': 'answer',
+        'sdp': _localSDP,
+        'candidates': _localCandidates,
+      };
+      
+      
+      await http.post(
+        Uri.parse('$serverUrl/answer'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(answerData),
+      );
+      
+      // No need to show answer QR - connection is automatic!
+      _connectionQrData = null;
+      notifyListeners();
+      
+      // Start HTTP fallback timer for receiver too
+      _startHttpFallbackForReceiver(serverUrl);
+      
+    } catch (e) {
+      print('Error processing QR: $e');
+    }
+  }
+
+  // Callbacks for UI updates
+  Function(BuildContext)? onTransferComplete;
+  Function(BuildContext)? onConnectionEstablished;
+  Function(BuildContext)? onConnectionFailed;
+
+  Future<void> _startHttpFallbackForReceiver(String serverUrl) async {
+    // Wait 10 seconds for WebRTC to connect
+    await Future.delayed(const Duration(seconds: 10));
+    
+    if (!_isConnected) {
+      print('WebRTC failed - using HTTP fallback to fetch files');
+      _useHttpFallback = true;
+      _transferStatus = 'Downloading via HTTP...';
+      notifyListeners();
+      
+      try {
+        // Fetch file list
+        final response = await http.get(Uri.parse('$serverUrl/files'));
+        final data = jsonDecode(response.body);
+        final files = data['files'] as List;
+        
+        print('Found ${files.length} files to download');
+        
+        // Download each file
+        for (int i = 0; i < files.length; i++) {
+          final fileInfo = files[i];
+          final fileName = fileInfo['name'];
+          final fileSize = fileInfo['size'];
+          
+          _currentFileName = fileName;
+          _isTransferring = true;
+          _transferProgress = (i / files.length); // Overall progress
+          notifyListeners();
+          
+          print('Downloading file ${i + 1}/${files.length}: $fileName');
+          final fileResponse = await http.get(
+            Uri.parse('$serverUrl/file/${Uri.encodeComponent(fileName)}'),
+          );
+          
+          if (fileResponse.statusCode == 200) {
+            final fileData = fileResponse.bodyBytes;
+            await _saveReceivedFile(Uint8List.fromList(fileData), {
+              'name': fileName,
+              'size': fileSize,
+            });
+            print('Downloaded $fileName successfully (${fileData.length} bytes)');
+            
+            // Update progress
+            _transferProgress = ((i + 1) / files.length);
+            notifyListeners();
+          } else {
+            print('Failed to download $fileName: ${fileResponse.statusCode}');
+          }
+        }
+        
+        _isTransferring = false;
+        _currentFileName = '';
+        _transferProgress = 1.0;
+        _transferStatus = 'Transfer complete (HTTP)';
+        notifyListeners();
+        
+        print('All files downloaded successfully!');
+        
+      } catch (e) {
+        print('HTTP fallback error: $e');
+        _isTransferring = false;
+        _transferStatus = 'Transfer failed';
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> startTransfer() async {
+    if (_selectedFiles.isEmpty) {
+      print('Cannot start transfer: no files selected');
+      return;
+    }
+
+    // Check if we should use HTTP fallback
+    if (_useHttpFallback || !_isConnected) {
+      print('Using HTTP fallback for transfer');
+      _transferStatus = 'Transferring via HTTP...';
+      _isTransferring = true;
+      notifyListeners();
+      
+      // Simulate progress for sender (files are being served via HTTP)
+      // The receiver will pull the files from the server
+      for (int i = 0; i < _selectedFiles.length; i++) {
+        _currentFileName = _selectedFiles[i].name;
+        _transferProgress = (i + 1) / _selectedFiles.length;
+        notifyListeners();
+        
+        // Wait a bit to simulate transfer time
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+      
+      _isTransferring = false;
+      _transferProgress = 1.0;
+      _transferStatus = 'Transfer complete (HTTP)';
+      notifyListeners();
+      return;
+    }
+
+    // Use WebRTC transfer
+    _isTransferring = true;
+    _transferProgress = 0.0;
+    notifyListeners();
+
+    try {
+      for (int i = 0; i < _selectedFiles.length; i++) {
+        final file = _selectedFiles[i];
+        
+        // Update current file
+        _currentFileName = file.name;
+        notifyListeners();
+
+        // Read file data and send via WebRTC
+        final fileData = await File(file.path!).readAsBytes();
+        await _webRTCService.sendFile(
+          fileData,
+          file.name,
+          file.extension ?? 'bin',
+        );
+
+        if (i < _selectedFiles.length - 1) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+      }
+
+      _isTransferring = false;
+      _transferProgress = 0.0;
+      _currentFileName = '';
+      notifyListeners();
+    } catch (e) {
+      print('Transfer error: $e');
+      _isTransferring = false;
+      _currentFileName = '';
+      notifyListeners();
+    }
+  }
+
+  Future<void> addReceivedFile(PlatformFile file) async {
+    await DatabaseService().insertFile(file, 'received');
+    _receivedFiles.insert(0, file);
+    await NotificationService().showNotification(
+      id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title: 'File Received',
+      body: 'Received ${file.name}',
+    );
+    notifyListeners();
+  }
+
+  void pauseTransfer() {
+    _webRTCService.pauseTransfer();
+    notifyListeners();
+  }
+
+  void resumeTransfer() {
+    _webRTCService.resumeTransfer();
+    notifyListeners();
+  }
+
+  void reset() {
+    _selectedFiles = [];
+    _isGeneratingQR = false;
+    _connectionQrData = null;
+    _isTransferring = false;
+    _transferProgress = 0.0;
+    _currentFileName = '';
+    _localSDP = null;
+    _localCandidates.clear();
+    _webRTCService.close();
+    _signalingServer?.close();
+    _signalingServer = null;
+    _useHttpFallback = false;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _webRTCService.close();
+    super.dispose();
+  }
+}

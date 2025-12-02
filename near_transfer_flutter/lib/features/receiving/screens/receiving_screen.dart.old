@@ -1,0 +1,310 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:animate_do/animate_do.dart';
+import '../../../shared/widgets/animated_background.dart';
+import '../../../shared/providers/transfer_provider.dart';
+import '../../../shared/widgets/transfer_dialogs.dart';
+import '../../../core/constants.dart';
+
+class ReceivingScreen extends StatefulWidget {
+  const ReceivingScreen({super.key});
+
+  @override
+  State<ReceivingScreen> createState() => _ReceivingScreenState();
+}
+
+class _ReceivingScreenState extends State<ReceivingScreen> {
+  bool _hasShownCompleteDialog = false;
+
+  @override
+  void dispose() {
+    _hasShownCompleteDialog = false;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () {
+            context.read<TransferProvider>().reset();
+            context.go('/');
+          },
+        ),
+        title: const Text('Receiving Files', style: TextStyle(color: Colors.white)),
+      ),
+      body: AnimatedBackground(
+        child: Consumer<TransferProvider>(
+          builder: (context, provider, child) {
+            // Show completion dialog when transfer finishes
+            if (!provider.isTransferring && 
+                provider.receivedFiles.isNotEmpty && 
+                !_hasShownCompleteDialog &&
+                provider.transferStatus.contains('complete')) {
+              _hasShownCompleteDialog = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                TransferDialogs.showTransferComplete(
+                  context,
+                  provider.receivedFiles.length,
+                );
+              });
+            }
+
+            return Container(
+              margin: const EdgeInsets.only(top: kToolbarHeight + 20),
+              padding: const EdgeInsets.all(AppConstants.spacingLg),
+              decoration: const BoxDecoration(
+                color: AppColors.surfaceAlt,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Connection Status
+                  FadeInDown(
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: provider.isConnected
+                              ? [Colors.green.shade400, Colors.green.shade600]
+                              : [Colors.orange.shade400, Colors.orange.shade600],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (provider.isConnected ? Colors.green : Colors.orange)
+                                .withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            provider.isConnected
+                                ? Icons.check_circle
+                                : (provider.isTransferring ? Icons.cloud_download : Icons.pending),
+                            color: Colors.white,
+                            size: 40,
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  provider.isConnected 
+                                      ? 'Connected!' 
+                                      : (provider.isTransferring 
+                                          ? 'Downloading...' 
+                                          : 'Connecting...'),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  provider.isConnected
+                                      ? 'Ready to receive files'
+                                      : (provider.isTransferring
+                                          ? (provider.transferStatus.contains('HTTP') 
+                                              ? 'Using HTTP fallback' 
+                                              : 'Via WebRTC P2P')
+                                          : 'Establishing connection...'),
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  
+                  // Transfer Progress
+                  if (provider.isTransferring) ...[
+                    FadeIn(
+                      child: Column(
+                        children: [
+                          const Text(
+                            'Receiving Files',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (provider.currentFileName.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.file_present, color: AppColors.primary),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Current File:',
+                                          style: TextStyle(
+                                            color: AppColors.muted,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          provider.currentFileName,
+                                          style: const TextStyle(
+                                            color: AppColors.textPrimary,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const SizedBox(height: 24),
+                          Stack(
+                            children: [
+                              Container(
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                              ),
+                              FractionallySizedBox(
+                                widthFactor: provider.transferProgress,
+                                child: Container(
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [AppColors.accentStart, AppColors.accentEnd],
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            '${(provider.transferProgress * 100).toStringAsFixed(0)}%',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else if (provider.isConnected) ...[
+                    Expanded(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.cloud_download,
+                              size: 100,
+                              color: AppColors.primary.withOpacity(0.3),
+                            ),
+                            const SizedBox(height: 24),
+                            const Text(
+                              'Waiting for sender to start transfer...',
+                              style: TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 16,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 32),
+                            const CircularProgressIndicator(),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  
+                  // Received Files Count
+                  if (provider.receivedFiles.isNotEmpty && !provider.isTransferring) ...[
+                    const SizedBox(height: 32),
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.green.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle, color: Colors.green, size: 32),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Transfer Complete!',
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Received ${provider.receivedFiles.length} file(s)',
+                                  style: const TextStyle(
+                                    color: AppColors.muted,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
