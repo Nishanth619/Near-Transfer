@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:ui';
 import '../../../shared/widgets/animated_background.dart';
+import '../../../shared/widgets/help_button.dart';
+import '../../../shared/widgets/banner_ad_widget.dart';
 import '../../../core/constants.dart';
 
 class MoreFeaturesScreen extends StatelessWidget {
@@ -9,81 +12,158 @@ class MoreFeaturesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final features = [
+      _FeatureItem(
+        title: 'Phone Clone',
+        subtitle: 'Migrate all your data',
+        icon: Icons.phone_android_rounded,
+        color: const Color(0xFF10B981),
+        route: '/phone-clone',
+      ),
+      _FeatureItem(
+        title: 'Browse Files',
+        subtitle: 'Explore & manage files',
+        icon: Icons.folder_rounded,
+        color: const Color(0xFF3B82F6),
+        route: '/file-manager',
+      ),
+      _FeatureItem(
+        title: 'Share Apps',
+        subtitle: 'Send installed apps',
+        icon: Icons.apps_rounded,
+        color: const Color(0xFF8B5CF6),
+        route: '/app-manager',
+      ),
+      _FeatureItem(
+        title: 'Clipboard',
+        subtitle: 'Sync & share text',
+        icon: Icons.content_paste_rounded,
+        color: const Color(0xFFA855F7),
+        route: '/clipboard',
+      ),
+      _FeatureItem(
+        title: 'Contacts',
+        subtitle: 'Share your contacts',
+        icon: Icons.contacts_rounded,
+        color: const Color(0xFFF97316),
+        route: '/contact-manager',
+      ),
+      _FeatureItem(
+        title: 'Shake',
+        subtitle: 'Quick connect',
+        icon: Icons.vibration_rounded,
+        color: const Color(0xFF14B8A6),
+        route: '/shake-connect',
+      ),
+      _FeatureItem(
+        title: 'Speed Test',
+        subtitle: 'Check connection',
+        icon: Icons.speed_rounded,
+        color: const Color(0xFFEF4444),
+        route: '/speed-test',
+      ),
+    ];
+
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'More Features',
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
       body: AnimatedBackground(
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              children: [
-                // Browse Files
-                _buildFeatureCard(
-                  context,
-                  title: 'Browse Files',
-                  icon: Icons.folder,
-                  color: Colors.blue,
-                  onTap: () => context.push('/file-manager'),
-                ),
-                
-                // Share Apps
-                _buildFeatureCard(
-                  context,
-                  title: 'Share Apps',
-                  icon: Icons.apps,
-                  color: Colors.deepPurple,
-                  onTap: () => context.push('/app-manager'),
-                ),
-                
-                // Clipboard Sync
-                _buildFeatureCard(
-                  context,
-                  title: 'Clipboard',
-                  icon: Icons.content_paste,
-                  color: Colors.purple,
-                  onTap: () => context.push('/clipboard'),
-                ),
-                
-                // Share Contacts
-                _buildFeatureCard(
-                  context,
-                  title: 'Contacts',
-                  icon: Icons.contacts,
-                  color: Colors.orange,
-                  onTap: () => context.push('/contact-manager'),
-                ),
-                
-                // Shake to Connect
-                _buildFeatureCard(
-                  context,
-                  title: 'Shake',
-                  icon: Icons.vibration,
-                  color: Colors.teal,
-                  onTap: () => context.push('/shake-connect'),
-                ),
-                
-                // Transfer History
-                _buildFeatureCard(
-                  context,
-                  title: 'History',
-                  icon: Icons.history,
-                  color: Colors.amber,
-                  onTap: () => context.push('/history'),
-                ),
-              ],
+        child: Stack(
+          children: [
+            SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                    child: FadeInDown(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(
+                              Icons.grid_view_rounded,
+                              color: Colors.white,
+                              size: 26,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'More Features',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Explore all tools',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const HelpButton(
+                            featureName: 'More Features',
+                            helpText: 'Access additional NearTransfer tools:\n\n• Phone Clone: Transfer all data to a new phone\n• Browse Files: Select files to share\n• Share Apps: Send installed apps to other devices\n• Clipboard: Sync copied text between devices\n• Contacts: Share contact cards\n• Shake: Quick connect by shaking phones\n• Speed Test: Check transfer speed',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // Features Grid
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: GridView.builder(
+                        padding: const EdgeInsets.only(bottom: 180), // Extra space for banner
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 0.75,
+                        ),
+                        itemCount: features.length,
+                        itemBuilder: (context, index) {
+                          return FadeInUp(
+                            delay: Duration(milliseconds: 100 * index),
+                            child: _buildFeatureCard(
+                              context,
+                              feature: features[index],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+            // Banner Ad at absolute bottom (below floating nav bar)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                child: const Center(child: BannerAdWidget()),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -91,49 +171,95 @@ class MoreFeaturesScreen extends StatelessWidget {
 
   Widget _buildFeatureCard(
     BuildContext context, {
-    required String title,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
+    required _FeatureItem feature,
   }) {
-    return FadeInUp(
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+    return GestureDetector(
+      onTap: () => context.push(feature.route),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  color.withOpacity(0.8),
-                  color,
+                  Colors.white.withOpacity(0.15),
+                  Colors.white.withOpacity(0.05),
                 ],
               ),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1.5,
+              ),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Stack(
               children: [
-                Icon(
-                  icon,
-                  size: 48,
-                  color: Colors.white,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                // Background accent
+                Positioned(
+                  top: -15,
+                  right: -15,
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: feature.color.withOpacity(0.3),
+                    ),
                   ),
-                  textAlign: TextAlign.center,
+                ),
+                
+                // Content
+                Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Icon container
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: feature.color.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: feature.color.withOpacity(0.3),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Icon(
+                          feature.icon,
+                          size: 36,
+                          color: feature.color,
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Title
+                      Text(
+                        feature.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 4),
+                      
+                      // Subtitle
+                      Text(
+                        feature.subtitle,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -142,4 +268,20 @@ class MoreFeaturesScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FeatureItem {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final String route;
+
+  const _FeatureItem({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.route,
+  });
 }

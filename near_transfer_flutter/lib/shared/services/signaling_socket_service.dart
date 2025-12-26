@@ -12,6 +12,17 @@ enum SignalingMessageType {
   answer,
   iceCandidate,
   fallbackUpload,
+  preConnect, // New message type for locking receiver
+  resumeRequest, // Request to resume interrupted transfer
+  resumeAck, // Acknowledge resume request
+  resumeReject, // Reject resume request
+  pause, // Pause current transfer
+  resume, // Resume current transfer
+  groupCreate, // Create group transfer session
+  groupJoin, // Join group transfer session
+  groupLeave, // Leave group transfer session
+  groupBroadcast, // Broadcast message to group
+  groupMemberUpdate, // Member list changed
 }
 
 class SignalingMessage {
@@ -44,6 +55,19 @@ class SignalingMessage {
       'sessionId': sessionId,
       ...data,
     };
+  }
+  
+  static SignalingMessage preConnect({
+    required String sessionId,
+    required String senderName,
+  }) {
+    return SignalingMessage(
+      type: SignalingMessageType.preConnect,
+      sessionId: sessionId,
+      data: {
+        'senderName': senderName,
+      },
+    );
   }
 
   static SignalingMessage connectRequest({
@@ -136,6 +160,159 @@ class SignalingMessage {
       },
     );
   }
+
+  static SignalingMessage resumeRequest({
+    required String sessionId,
+    required String transferId,
+    required String fileName,
+    required int fileSize,
+    required int lastChunkSeq,
+    required int totalChunks,
+    required int chunkSize,
+    String? fileHash,
+  }) {
+    return SignalingMessage(
+      type: SignalingMessageType.resumeRequest,
+      sessionId: sessionId,
+      data: {
+        'transferId': transferId,
+        'fileName': fileName,
+        'fileSize': fileSize,
+        'lastChunkSeq': lastChunkSeq,
+        'totalChunks': totalChunks,
+        'chunkSize': chunkSize,
+        if (fileHash != null) 'fileHash': fileHash,
+      },
+    );
+  }
+
+  static SignalingMessage resumeAck({
+    required String sessionId,
+    required String transferId,
+    required bool ok,
+    required int receiverLastChunk,
+    String? reason,
+  }) {
+    return SignalingMessage(
+      type: SignalingMessageType.resumeAck,
+      sessionId: sessionId,
+      data: {
+        'transferId': transferId,
+        'ok': ok,
+        'receiverLastChunk': receiverLastChunk,
+        if (reason != null) 'reason': reason,
+      },
+    );
+  }
+
+  static SignalingMessage resumeReject({
+    required String sessionId,
+    required String transferId,
+    required String reason,
+  }) {
+    return SignalingMessage(
+      type: SignalingMessageType.resumeReject,
+      sessionId: sessionId,
+      data: {
+        'transferId': transferId,
+        'reason': reason,
+      },
+    );
+  }
+  
+  static SignalingMessage pause({required String sessionId}) {
+    return SignalingMessage(
+      type: SignalingMessageType.pause,
+      sessionId: sessionId,
+      data: {},
+    );
+  }
+  
+  static SignalingMessage resume({required String sessionId}) {
+    return SignalingMessage(
+      type: SignalingMessageType.resume,
+      sessionId: sessionId,
+      data: {},
+    );
+  }
+  
+  // Group transfer messages
+  static SignalingMessage groupCreate({
+    required String sessionId,
+    required String groupId,
+    required String hostDeviceId,
+  }) {
+    return SignalingMessage(
+      type: SignalingMessageType.groupCreate,
+      sessionId: sessionId,
+      data: {
+        'groupId': groupId,
+        'hostDeviceId': hostDeviceId,
+      },
+    );
+  }
+  
+  static SignalingMessage groupJoin({
+    required String sessionId,
+    required String groupId,
+    required String deviceId,
+    required String deviceName,
+  }) {
+    return SignalingMessage(
+      type: SignalingMessageType.groupJoin,
+      sessionId: sessionId,
+      data: {
+        'groupId': groupId,
+        'deviceId': deviceId,
+        'deviceName': deviceName,
+      },
+    );
+  }
+  
+  static SignalingMessage groupLeave({
+    required String sessionId,
+    required String groupId,
+    required String deviceId,
+  }) {
+    return SignalingMessage(
+      type: SignalingMessageType.groupLeave,
+      sessionId: sessionId,
+      data: {
+        'groupId': groupId,
+        'deviceId': deviceId,
+      },
+    );
+  }
+  
+  static SignalingMessage groupBroadcast({
+    required String sessionId,
+    required String groupId,
+    required Map<String, dynamic> payload,
+  }) {
+    return SignalingMessage(
+      type: SignalingMessageType.groupBroadcast,
+      sessionId: sessionId,
+      data: {
+        'groupId': groupId,
+        'payload': payload,
+      },
+    );
+  }
+  
+  static SignalingMessage groupMemberUpdate({
+    required String sessionId,
+    required String groupId,
+    required List<Map<String, String>> members,
+  }) {
+    return SignalingMessage(
+      type: SignalingMessageType.groupMemberUpdate,
+      sessionId: sessionId,
+      data: {
+        'groupId': groupId,
+        'members': members,
+      },
+    );
+  }
 }
 
 class SignalingSocketService extends ChangeNotifier {
@@ -148,11 +325,33 @@ class SignalingSocketService extends ChangeNotifier {
   String? _deviceIp;
   int? _devicePort;
   
+  
+  // Shake mode state
+  bool _isShakeMode = false;
+  int? _shakeTimestamp;
+  
   bool _isServerMode = false;
   bool get isServerMode => _isServerMode;
   
+  /// Check if signaling connection is active
+  bool get isConnected => _clientSocket != null;
+  
   Function(SignalingMessage)? onMessageReceived;
   Function()? onConnectionClosed;
+  
+  /// Enable shake mode with timestamp
+  void enableShakeMode(int timestamp) {
+    _isShakeMode = true;
+    _shakeTimestamp = timestamp;
+    print('🤝 SignalingSocket: Shake mode enabled with timestamp: $timestamp');
+  }
+
+  /// Disable shake mode
+  void disableShakeMode() {
+    _isShakeMode = false;
+    _shakeTimestamp = null;
+    print('🤝 SignalingSocket: Shake mode disabled');
+  }
   
   // Start server mode (receiver) - with device info for discovery
   Future<void> startServer({
@@ -224,6 +423,8 @@ class SignalingSocketService extends ChangeNotifier {
                 'ip': _deviceIp,
                 'port': _devicePort,
                 'timestamp': DateTime.now().millisecondsSinceEpoch,
+                'isShaking': _isShakeMode,
+                if (_shakeTimestamp != null) 'shakeTimestamp': _shakeTimestamp,
               };
               
               final responseJson = jsonEncode(response) + '\n';
@@ -247,8 +448,10 @@ class SignalingSocketService extends ChangeNotifier {
             // Handle regular signaling messages
             final signalingMessage = SignalingMessage.fromJson(json);
             
-            print('📥 Received signaling message: ${signalingMessage.type}');
+            print('📥 [RECV] Received signaling message: ${signalingMessage.type}');
+            print('📥 [RECV] Calling onMessageReceived callback...');
             onMessageReceived?.call(signalingMessage);
+            print('📥 [RECV] Callback completed');
           }
         } catch (e) {
           print('❌ Error parsing message: $e');
@@ -344,8 +547,11 @@ class SignalingSocketService extends ChangeNotifier {
 
   // Send message
   Future<void> sendMessage(SignalingMessage message) async {
+    print('📤 [SEND] Attempting to send ${message.type}');
+    print('📤 [SEND] Client socket status: ${_clientSocket != null ? "CONNECTED" : "NULL"}');
+    
     if (_clientSocket == null) {
-      print('❌ Cannot send message: not connected');
+      print('❌ [SEND] Cannot send message: not connected');
       return;
     }
     
@@ -354,9 +560,11 @@ class SignalingSocketService extends ChangeNotifier {
       _clientSocket!.add(utf8.encode(json));
       await _clientSocket!.flush();
       
-      print('Sent message: ${message.type}');
+      print('✅ [SEND] Sent message: ${message.type}');
     } catch (e) {
-      print('Error sending message: $e');
+      print('❌ [SEND] Error sending message: $e');
+      print('❌ [SEND] Socket may be closed, attempting to report error');
+      rethrow;
     }
   }
 

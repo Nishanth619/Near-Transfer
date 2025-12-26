@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../shared/widgets/animated_background.dart';
+import '../../../shared/widgets/help_button.dart';
 import '../../../core/constants.dart';
 import '../models/file_item.dart';
 import '../services/file_system_service.dart';
@@ -243,8 +244,8 @@ class _FileManagerScreenState extends State<FileManagerScreen> with SingleTicker
       );
     }).toList();
 
-    // Return to previous screen with selected files
-    Navigator.pop(context, platformFiles);
+    // Navigate to device discovery screen with selected files
+    context.push('/discovery', extra: {'files': platformFiles});
   }
 
   void _selectAll() {
@@ -263,17 +264,16 @@ class _FileManagerScreenState extends State<FileManagerScreen> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        if (_isSelectionMode) {
-          _clearSelection();
-          return false;
+    return PopScope(
+      canPop: !_isSelectionMode && _pathHistory.isEmpty,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          if (_isSelectionMode) {
+            _clearSelection();
+          } else if (_pathHistory.isNotEmpty) {
+            _navigateBack();
+          }
         }
-        if (_pathHistory.isNotEmpty) {
-          _navigateBack();
-          return false;
-        }
-        return true;
       },
       child: Scaffold(
         extendBodyBehindAppBar: true,
@@ -301,7 +301,12 @@ class _FileManagerScreenState extends State<FileManagerScreen> with SingleTicker
                     onPressed: _clearSelection,
                   ),
                 ]
-              : null,
+              : [
+                  const HelpButton(
+                    featureName: 'File Manager',
+                    helpText: 'Browse and select files to share.\n\n• Navigate folders by tapping\n• Tap files to select for sharing\n• Use categories to filter by type\n• Long press to start multi-select',
+                  ),
+                ],
           bottom: TabBar(
             controller: _tabController,
             isScrollable: true,

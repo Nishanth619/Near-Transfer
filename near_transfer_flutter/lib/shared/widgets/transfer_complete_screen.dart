@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import '../../../shared/widgets/animated_background.dart';
 import 'package:file_picker/file_picker.dart';
+import '../services/ad_service.dart';
 
-class TransferCompleteScreen extends StatelessWidget {
+class TransferCompleteScreen extends StatefulWidget {
   final List<PlatformFile> files;
   final bool isSender;
 
@@ -14,9 +15,27 @@ class TransferCompleteScreen extends StatelessWidget {
   });
 
   @override
+  State<TransferCompleteScreen> createState() => _TransferCompleteScreenState();
+}
+
+class _TransferCompleteScreenState extends State<TransferCompleteScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Show interstitial ad after transfer completes (if not premium)
+    _showInterstitialAd();
+  }
+
+  Future<void> _showInterstitialAd() async {
+    // Small delay to let the screen render first
+    await Future.delayed(const Duration(milliseconds: 500));
+    await AdService().showInterstitialAd();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async => false, // Prevent back button
+    return PopScope(
+      canPop: false, // Prevent back button
       child: Scaffold(
         body: AnimatedBackground(
           child: SafeArea(
@@ -49,7 +68,7 @@ class TransferCompleteScreen extends StatelessWidget {
                   FadeInUp(
                     delay: const Duration(milliseconds: 200),
                     child: Text(
-                      isSender ? 'Files Sent!' : 'Files Received!',
+                      widget.isSender ? 'Files Sent!' : 'Files Received!',
                       style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -64,7 +83,7 @@ class TransferCompleteScreen extends StatelessWidget {
                   FadeInUp(
                     delay: const Duration(milliseconds: 300),
                     child: Text(
-                      '${files.length} ${files.length == 1 ? 'file' : 'files'} transferred successfully',
+                      '${widget.files.length} ${widget.files.length == 1 ? 'file' : 'files'} transferred successfully',
                       style: const TextStyle(
                         fontSize: 16,
                         color: Colors.white70,
@@ -102,10 +121,10 @@ class TransferCompleteScreen extends StatelessWidget {
                             const SizedBox(height: 12),
                             Expanded(
                               child: ListView.separated(
-                                itemCount: files.length,
+                                itemCount: widget.files.length,
                                 separatorBuilder: (context, index) => const SizedBox(height: 8),
                                 itemBuilder: (context, index) {
-                                  return _buildFileItem(files[index]);
+                                  return _buildFileItem(widget.files[index]);
                                 },
                               ),
                             ),

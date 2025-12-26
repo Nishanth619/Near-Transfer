@@ -36,6 +36,7 @@ class WebRTCService {
   Completer<void>? _fileAckCompleter;
   
   bool get isDataChannelOpen => _dataChannel?.state == webrtc.RTCDataChannelState.RTCDataChannelOpen;
+  bool get isPaused => _isPaused; // Public getter to check pause state
   
   final Map<String, dynamic> _configuration = {
     'iceServers': [
@@ -272,12 +273,15 @@ class WebRTCService {
     }
   }
 
-  Future<void> sendFile(Uint8List fileData, String fileName, int fileSize) async {
+  Future<void> sendFile(Uint8List fileData, String fileName, int fileSize, {int startChunkIndex = 0}) async {
     if (_dataChannel == null || !isDataChannelOpen) {
       throw Exception('Data channel not open');
     }
 
     print('Sending file: $fileName ($fileSize bytes)');
+    if (startChunkIndex > 0) {
+      print('🔄 Resuming from chunk $startChunkIndex');
+    }
     
     // Send metadata
     final meta = {
@@ -285,18 +289,32 @@ class WebRTCService {
       'name': fileName,
       'size': fileSize,
       'chunkSize': NetworkConfig.chunkSize,
+      if (startChunkIndex > 0) 'startChunk': startChunkIndex, // For resume
     };
     _dataChannel!.send(webrtc.RTCDataChannelMessage(jsonEncode(meta)));
     _log('Send metadata: $fileName');
     
-    // Send chunks with flow control
-    _currentChunkSeq = 0;
+    // Calculate starting position for resume
+    final startByteIndex = startChunkIndex * NetworkConfig.chunkSize;
+    _currentChunkSeq = startChunkIndex;
     final totalChunks = (fileSize / NetworkConfig.chunkSize).ceil();
     
-    for (int i = 0; i < fileSize; i += NetworkConfig.chunkSize) {
-      // Wait if paused
-      while (_isPaused) {
-        await Future.delayed(const Duration(milliseconds: 100));
+    for (int i = startByteIndex; i < fileSize; i += NetworkConfig.chunkSize) {
+      // Check if paused - this happens BEFORE sending each chunk
+      if (_isPaused) {
+        print('⏸️⏸️⏸️ TRANSFER PAUSED at chunk $_currentChunkSeq/$totalChunks');
+        print('   Waiting for resume...');
+        
+        int pauseCounter = 0;
+        while (_isPaused) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          pauseCounter++;
+          if (pauseCounter % 2 == 0) {  // Log every second
+            print('   ⏸️ Still paused... (${pauseCounter ~/2}s)');
+          }
+        }
+        
+        print('▶️ Transfer RESUMED from chunk $_currentChunkSeq/$totalChunks');
       }
       
       // Flow control: wait if buffer is full
@@ -358,11 +376,15 @@ class WebRTCService {
   }
 
   void pauseSending() {
+    print('🔴 PAUSE SENDING CALLED - Setting _isPaused = true');
     _isPaused = true;
+    print('🔴 _isPaused is now: $_isPaused');
   }
 
   void resumeSending() {
+    print('🟢 RESUME SENDING CALLED - Setting _isPaused = false');
     _isPaused = false;
+    print('🟢 _isPaused is now: $_isPaused');
   }
 
   void close() {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/home/screens/more_features_screen.dart';
 import '../../features/history/screens/history_screen.dart';
+import '../../features/settings/screens/settings_screen.dart';
 import '../widgets/animated_background.dart';
 
 class MainScreen extends StatefulWidget {
@@ -16,8 +17,9 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _screens = [
     const HomeScreen(),
-    const HistoryScreen(),
     const MoreFeaturesScreen(),
+    const HistoryScreen(),
+    const SettingsScreen(),
   ];
 
   @override
@@ -56,8 +58,8 @@ class _MainScreenState extends State<MainScreen> {
             },
             selectedItemColor: Colors.white,
             unselectedItemColor: Colors.white.withOpacity(0.5),
-            selectedFontSize: 13,
-            unselectedFontSize: 12,
+            selectedFontSize: 12,
+            unselectedFontSize: 11,
             type: BottomNavigationBarType.fixed,
             elevation: 0,
             backgroundColor: Colors.transparent,
@@ -66,19 +68,24 @@ class _MainScreenState extends State<MainScreen> {
             ),
             items: const [
               BottomNavigationBarItem(
-                icon: Icon(Icons.home_rounded, size: 26),
-                activeIcon: Icon(Icons.home_rounded, size: 28),
+                icon: Icon(Icons.home_rounded, size: 24),
+                activeIcon: Icon(Icons.home_rounded, size: 26),
                 label: 'Home',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.history_rounded, size: 26),
-                activeIcon: Icon(Icons.history_rounded, size: 28),
+                icon: Icon(Icons.apps_rounded, size: 24),
+                activeIcon: Icon(Icons.apps_rounded, size: 26),
+                label: 'More',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.history_rounded, size: 24),
+                activeIcon: Icon(Icons.history_rounded, size: 26),
                 label: 'History',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.apps_rounded, size: 26),
-                activeIcon: Icon(Icons.apps_rounded, size: 28),
-                label: 'More',
+                icon: Icon(Icons.settings_rounded, size: 24),
+                activeIcon: Icon(Icons.settings_rounded, size: 26),
+                label: 'Settings',
               ),
             ],
           ),

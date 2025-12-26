@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../shared/widgets/animated_background.dart';
+import '../../../shared/widgets/help_button.dart';
 import '../../../core/constants.dart';
 import '../models/app_item.dart';
 import '../services/app_service.dart';
@@ -163,7 +164,12 @@ class _AppManagerScreenState extends State<AppManagerScreen>
                   tooltip: 'Deselect All',
                 ),
               ]
-            : null,
+            : [
+                const HelpButton(
+                  featureName: 'Share Apps',
+                  helpText: 'Share installed apps with other devices.\n\n• Browse all installed apps\n• Filter by user or system apps\n• Select apps to share as APK files\n• Search to find specific apps',
+                ),
+              ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,

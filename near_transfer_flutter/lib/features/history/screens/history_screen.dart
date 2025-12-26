@@ -4,6 +4,8 @@ import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:io';
 import '../../../shared/widgets/animated_background.dart';
+import '../../../shared/widgets/help_button.dart';
+import '../../../shared/widgets/banner_ad_widget.dart';
 import '../../../core/constants.dart';
 import '../../../shared/services/database_service.dart';
 
@@ -53,6 +55,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          const HelpButton(
+            featureName: 'Transfer History',
+            helpText: 'View all files you\'ve received.\n\n• Tap a file to open it\n• Swipe left to delete\n• Use the menu for more options\n• Share files directly from here',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _loadHistory,
@@ -60,21 +66,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
         ],
       ),
       body: AnimatedBackground(
-        child: Container(
-          margin: const EdgeInsets.only(top: kToolbarHeight + 20),
-          padding: const EdgeInsets.all(AppConstants.spacingLg),
-          decoration: const BoxDecoration(
-            color: AppColors.surfaceAlt,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(30),
-              topRight: Radius.circular(30),
+        child: Column(
+          children: [
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.only(top: kToolbarHeight + 20),
+                padding: const EdgeInsets.all(AppConstants.spacingLg),
+                decoration: const BoxDecoration(
+                  color: AppColors.surfaceAlt,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(30),
+                    topRight: Radius.circular(30),
+                  ),
+                ),
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _receivedFiles.isEmpty
+                        ? _buildEmptyState()
+                        : _buildFileList(),
+              ),
             ),
-          ),
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _receivedFiles.isEmpty
-                  ? _buildEmptyState()
-                  : _buildFileList(),
+            // Banner Ad at bottom
+            Container(
+              color: AppColors.surfaceAlt,
+              child: const SafeArea(
+                top: false,
+                child: BannerAdWidget(),
+              ),
+            ),
+          ],
         ),
       ),
     );

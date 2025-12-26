@@ -11,6 +11,14 @@ class AppColors {
   static const Color success = Color(0xFF16A34A);
   static const Color danger = Color(0xFFDC2626);
   static const Color backdrop = Color.fromRGBO(15, 23, 36, 0.5);
+  
+  // Dark Theme Colors
+  static const Color darkBackground = Color(0xFF121212);
+  static const Color darkSurface = Color(0xFF1E1E1E);
+  static const Color darkSurfaceAlt = Color(0xFF2C2C2C);
+  static const Color darkTextPrimary = Color(0xFFFFFFFF);
+  static const Color darkTextSecondary = Color(0xFFB3B3B3);
+  static const Color darkMuted = Color(0xFF9CA3AF);
 }
 
 class AppConstants {

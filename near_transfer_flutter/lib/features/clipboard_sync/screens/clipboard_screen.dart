@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../shared/widgets/animated_background.dart';
+import '../../../shared/widgets/help_button.dart';
 import '../../../core/constants.dart';
 import '../models/clipboard_item.dart';
 import '../services/clipboard_service.dart';
@@ -143,14 +144,6 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
       return;
     }
 
-    // Create a special clipboard file to send
-    final clipboardFile = PlatformFile(
-      name: 'clipboard.txt',
-      path: null, // No path, we'll send the content directly
-      size: _currentClipboard!.content.length,
-      bytes: null,
-    );
-
     // Navigate to device discovery with clipboard content
     // Pass the text content as extra data
     context.push('/discovery', extra: {
@@ -175,6 +168,10 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
           onPressed: () => context.pop(),
         ),
         actions: [
+          const HelpButton(
+            featureName: 'Clipboard Sync',
+            helpText: 'Sync and share text between devices.\n\n• View your current clipboard content\n• Save items to history for later\n• Tap the send button to share text\n• Enable auto-sync to automatically sync clipboard',
+          ),
           if (_history.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.delete_sweep, color: Colors.white),
@@ -212,58 +209,61 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
       );
     }
 
-    return Column(
-      children: [
-        // Auto-sync toggle
-        _buildAutoSyncToggle(),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 100),
+      child: Column(
+        children: [
+          // Auto-sync toggle
+          _buildAutoSyncToggle(),
 
-        const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-        // Current clipboard card
-        if (_currentClipboard != null) ...[
-          _buildCurrentClipboard(),
-          const SizedBox(height: 24),
-        ],
+          // Current clipboard card
+          if (_currentClipboard != null) ...[
+            _buildCurrentClipboard(),
+            const SizedBox(height: 24),
+          ],
 
-        // History header
-        if (_history.isNotEmpty) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'History (${_history.length})',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+          // History header
+          if (_history.isNotEmpty) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'History (${_history.length})',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              TextButton(
-                onPressed: _saveCurrentToHistory,
-                child: const Text('Save Current'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-        ],
-
-        // History list
-        Expanded(
-          child: _history.isEmpty
-              ? _buildEmptyState()
-              : ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 100),
-                  itemCount: _history.length,
-                  itemBuilder: (context, index) {
-                    final item = _history[index];
-                    return ClipboardListItem(
-                      item: item,
-                      onCopy: () => _copyToClipboard(item),
-                      onDelete: () => _deleteItem(item),
-                    );
-                  },
+                TextButton(
+                  onPressed: _saveCurrentToHistory,
+                  child: const Text('Save Current'),
                 ),
-        ),
-      ],
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+
+          // History list
+          if (_history.isEmpty)
+            _buildEmptyState()
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _history.length,
+              itemBuilder: (context, index) {
+                final item = _history[index];
+                return ClipboardListItem(
+                  item: item,
+                  onCopy: () => _copyToClipboard(item),
+                  onDelete: () => _deleteItem(item),
+                );
+              },
+            ),
+        ],
+      ),
     );
   }
 

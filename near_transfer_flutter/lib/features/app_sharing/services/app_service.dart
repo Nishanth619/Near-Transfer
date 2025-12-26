@@ -150,10 +150,10 @@ class AppService {
         icon: icon,
         isSystemApp: app.systemApp,
         installedTime: DateTime.fromMillisecondsSinceEpoch(
-          app.installTimeMillis ?? 0,
+          app.installTimeMillis,
         ),
         lastUpdateTime: DateTime.fromMillisecondsSinceEpoch(
-          app.updateTimeMillis ?? 0,
+          app.updateTimeMillis,
         ),
       );
     } catch (e) {

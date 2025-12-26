@@ -1,12 +1,16 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:provider/provider.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../shared/widgets/animated_background.dart';
+import '../../../shared/widgets/help_button.dart';
 import '../../../core/constants.dart';
 import '../../../shared/services/discovery_service.dart';
 import '../../../shared/services/signaling_socket_service.dart';
 import '../../../shared/services/webrtc_service.dart';
 import '../../../shared/providers/transfer_orchestrator.dart';
+import '../../../shared/providers/settings_provider.dart';
 import '../../../shared/widgets/transfer_dialogs.dart';
 import './receiving_progress_screen.dart';
 
@@ -25,6 +29,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   String? _currentFileName;
   double _progress = 0.0;
   String? _localIp; // Store local IP for debug display
+  bool _autoAccept = false;
 
   @override
   void initState() {
@@ -52,8 +57,15 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
     // Listen to orchestrator for progress updates
     _orchestrator.addListener(_updateProgress);
     
-    // Get device name
-    final deviceName = 'My Device'; // TODO: Get from settings
+    // Get settings
+    final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+    final deviceName = settingsProvider.deviceName;
+    _autoAccept = settingsProvider.autoAccept;
+    
+    // Enable keep screen on if setting is enabled
+    if (settingsProvider.keepScreenOn) {
+      WakelockPlus.enable();
+    }
     
     try {
       // Get local IP first
@@ -81,6 +93,9 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
         deviceIp: localIp,
       );
       print('TCP server started on $localIp:45455');
+      
+      // Link signaling service to discovery service for shake mode sync
+      _discoveryService.setSignalingService(signalingService);
       
       // Then start discovery (advertise presence)
       print('Starting discovery service...');
@@ -140,6 +155,8 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   void dispose() {
     _orchestrator.removeListener(_updateProgress);
     _discoveryService.stopDiscovery();
+    // Disable wakelock when leaving
+    WakelockPlus.disable();
     super.dispose();
   }
 
@@ -153,6 +170,12 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   ) {
     if (!mounted) return;
     
+    // If auto-accept is enabled, automatically accept the transfer
+    if (_autoAccept) {
+      _acceptAndNavigate(senderName, onAccept);
+      return;
+    }
+    
     TransferDialogs.showConnectionRequest(
       context: context,
       senderName: senderName,
@@ -160,32 +183,36 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
       fileSize: fileSize,
       files: files,
       onAccept: () {
-        // Accept connection
-        onAccept();
-        
-        // Navigate to progress screen
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ReceivingProgressScreen(
-              orchestrator: _orchestrator,
-              senderName: senderName,
-            ),
-          ),
-        ).then((success) {
-          // Reset after completion
-          if (mounted) {
-            _orchestrator.reset();
-            setState(() {
-              _isReceiving = false;
-              _currentFileName = null;
-              _progress = 0.0;
-            });
-          }
-        });
+        _acceptAndNavigate(senderName, onAccept);
       },
       onDecline: onDecline,
     );
+  }
+
+  void _acceptAndNavigate(String senderName, Function() onAccept) {
+    // Accept connection
+    onAccept();
+    
+    // Navigate to progress screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReceivingProgressScreen(
+          orchestrator: _orchestrator,
+          senderName: senderName,
+        ),
+      ),
+    ).then((success) {
+      // Reset after completion
+      if (mounted) {
+        _orchestrator.reset();
+        setState(() {
+          _isReceiving = false;
+          _currentFileName = null;
+          _progress = 0.0;
+        });
+      }
+    });
   }
 
   void _handleTransferComplete() {
@@ -219,6 +246,12 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: const [
+          HelpButton(
+            featureName: 'Receive Files',
+            helpText: 'Wait for nearby devices to send you files.\n\n• Your device is now visible to others on the same WiFi network\n• When someone sends files, you\'ll get a notification to accept\n• Files are saved to your Downloads folder',
+          ),
+        ],
       ),
       body: AnimatedBackground(
         child: Container(

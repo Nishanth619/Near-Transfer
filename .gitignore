@@ -87,3 +87,6 @@ near_transfer_flutter/build/app/intermediates/merged_native_libs/debug/mergeDebu
 near_transfer_flutter/build/app/intermediates/merged_native_libs/debug/mergeDebugNativeLibs/out/lib/x86_64/libflutter.so
 near_transfer_flutter/build/app/outputs/apk/debug/app-debug.apk
 near_transfer_flutter/build/app/outputs/flutter-apk/app-debug.apk
+near_transfer_flutter/build/app/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib/arm64-v8a/libflutter.so
+near_transfer_flutter/build/app/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib/armeabi-v7a/libflutter.so
+near_transfer_flutter/build/app/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib/x86_64/libflutter.so

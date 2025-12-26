@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/network_config.dart';
 import '../models/discovered_device.dart';
+import './signaling_socket_service.dart';
 
 class DiscoveryService extends ChangeNotifier {
   RawDatagramSocket? _socket;
@@ -29,15 +30,29 @@ class DiscoveryService extends ChangeNotifier {
   // Shake mode state
   bool _isShakeMode = false;
   int? _shakeTimestamp;
+  SignalingSocketService? _signalingService;
   
   bool get isShakeMode => _isShakeMode;
   int? get shakeTimestamp => _shakeTimestamp;
+
+  /// Set the signaling service reference
+  void setSignalingService(SignalingSocketService service) {
+    _signalingService = service;
+  }
 
   /// Enable shake mode with timestamp
   void enableShakeMode(int timestamp) {
     _isShakeMode = true;
     _shakeTimestamp = timestamp;
+    _signalingService?.enableShakeMode(timestamp);
     print('🤝 Shake mode enabled with timestamp: $timestamp');
+    
+    // IMMEDIATELY broadcast shake status via UDP beacon
+    _sendBeacon();
+    
+    // IMMEDIATELY scan network via TCP to find other shaking devices
+    _scanLocalSubnet();
+    
     notifyListeners();
   }
 
@@ -45,6 +60,7 @@ class DiscoveryService extends ChangeNotifier {
   void disableShakeMode() {
     _isShakeMode = false;
     _shakeTimestamp = null;
+    _signalingService?.disableShakeMode();
     print('🤝 Shake mode disabled');
     notifyListeners();
   }
@@ -165,7 +181,7 @@ class DiscoveryService extends ChangeNotifier {
       
       print('🔗 Connected to $ip! Sending probe...');
       
-      // Send discovery probe
+      // Send discovery probe with shake info
       final probe = {
         'type': 'discovery_probe',
         'deviceId': _deviceId,
@@ -173,6 +189,8 @@ class DiscoveryService extends ChangeNotifier {
         'ip': _localIp,
         'port': NetworkConfig.tcpPort,
         'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'isShaking': _isShakeMode,
+        if (_shakeTimestamp != null) 'shakeTimestamp': _shakeTimestamp,
       };
       
       socket.add(utf8.encode(jsonEncode(probe) + '\n'));
@@ -213,15 +231,17 @@ class DiscoveryService extends ChangeNotifier {
                 
                 final device = DiscoveredDevice.fromJson(json);
                 
-                // Add discovered device
+                // Add or update discovered device with shake info
                 final existingDevice = _discoveredDevices[device.deviceId];
                 if (existingDevice != null) {
                   _discoveredDevices[device.deviceId] = existingDevice.copyWith(
                     lastSeen: device.lastSeen,
+                    isShaking: device.isShaking,
+                    shakeTimestamp: device.shakeTimestamp,
                   );
                 } else {
                   _discoveredDevices[device.deviceId] = device;
-                  print('✅ DISCOVERED: ${device.deviceName} @ ${device.ip}');
+                  print('✅ DISCOVERED: ${device.deviceName} @ ${device.ip} ${device.isShaking ? "🤝 SHAKING" : ""}');
                 }
                 
                 notifyListeners();
@@ -293,7 +313,11 @@ class DiscoveryService extends ChangeNotifier {
         InternetAddress(NetworkConfig.multicastGroup),
         NetworkConfig.multicastPort,
       );
-      print('Sent beacon: $_deviceName @ $_localIp ${_isShakeMode ? "🤝 SHAKING" : ""}');
+      if (_isShakeMode) {
+        print('📢 SHAKE BEACON SENT: $_deviceName @ $_localIp (timestamp: $_shakeTimestamp)');
+      } else {
+        print('📢 Beacon sent: $_deviceName @ $_localIp');
+      }
     } catch (e) {
       print('Error sending beacon: $e');
     }
@@ -321,9 +345,16 @@ class DiscoveryService extends ChangeNotifier {
             isShaking: device.isShaking,
             shakeTimestamp: device.shakeTimestamp,
           );
+          if (device.isShaking) {
+            print('📡 SHAKE BEACON RECEIVED: ${device.deviceName} @ ${device.ip} (timestamp: ${device.shakeTimestamp})');
+          }
         } else {
           _discoveredDevices[device.deviceId] = device;
-          print('Discovered new device: ${device.deviceName} @ ${device.ip} ${device.isShaking ? "🤝" : ""}');
+          if (device.isShaking) {
+            print('✅ NEW SHAKING DEVICE DISCOVERED: ${device.deviceName} @ ${device.ip} (timestamp: ${device.shakeTimestamp})');
+          } else {
+            print('✅ Device discovered: ${device.deviceName} @ ${device.ip}');
+          }
         }
         
         notifyListeners();

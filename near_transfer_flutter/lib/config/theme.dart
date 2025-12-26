@@ -20,4 +20,28 @@ class AppTheme {
       useMaterial3: true,
     );
   }
+  
+  static ThemeData get darkTheme {
+    return ThemeData(
+      brightness: Brightness.dark,
+      primaryColor: AppColors.primary,
+      scaffoldBackgroundColor: AppColors.darkBackground,
+      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).apply(
+        bodyColor: AppColors.darkTextPrimary,
+        displayColor: AppColors.darkTextPrimary,
+      ),
+      colorScheme: ColorScheme.dark(
+        primary: AppColors.primary,
+        secondary: AppColors.accentStart,
+        surface: AppColors.darkSurface,
+        error: AppColors.danger,
+      ),
+      cardColor: AppColors.darkSurface,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.darkSurface,
+        elevation: 0,
+      ),
+      useMaterial3: true,
+    );
+  }
 }

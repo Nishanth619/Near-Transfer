@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../features/clipboard_sync/models/clipboard_item.dart';
 
 class DatabaseService {
@@ -14,6 +15,10 @@ class DatabaseService {
   DatabaseService._internal();
 
   Future<Database> get database async {
+    // SQLite is not supported on web
+    if (kIsWeb) {
+      throw UnsupportedError('Database not supported on web platform');
+    }
     if (_database != null) return _database!;
     _database = await _initDatabase();
     return _database!;
@@ -116,6 +121,8 @@ class DatabaseService {
   }
 
   Future<List<Map<String, dynamic>>> getHistory() async {
+    // Return empty list on web since SQLite is not supported
+    if (kIsWeb) return [];
     final db = await database;
     return await db.query('history', orderBy: 'timestamp DESC');
   }

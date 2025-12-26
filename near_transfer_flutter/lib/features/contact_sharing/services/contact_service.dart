@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/contact_item.dart' as models;

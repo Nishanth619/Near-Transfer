@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/animated_background.dart';
+import '../../../shared/widgets/help_button.dart';
 import '../../../core/constants.dart';
 import '../models/contact_item.dart';
 import '../services/contact_service.dart';
@@ -108,6 +109,12 @@ class _ContactManagerScreenState extends State<ContactManagerScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
+        actions: const [
+          HelpButton(
+            featureName: 'Share Contacts',
+            helpText: 'Share your contacts with other devices.\n\n• Select contacts to share\n• Exported as vCard format\n• Search to find specific contacts\n• Recipient can import to their address book',
+          ),
+        ],
       ),
       body: AnimatedBackground(
         child: Container(
