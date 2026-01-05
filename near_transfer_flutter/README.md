@@ -9,26 +9,34 @@
 </p>
 
 <p align="center">
-  <a href="#features">Features</a> •
-  <a href="#screenshots">Screenshots</a> •
-  <a href="#architecture">Architecture</a> •
-  <a href="#tech-stack">Tech Stack</a> •
-  <a href="#performance">Performance</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#license">License</a>
-</p>
-
-<p align="center">
   <img src="https://img.shields.io/badge/Flutter-3.9.2-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter">
   <img src="https://img.shields.io/badge/Dart-3.0+-0175C2?style=for-the-badge&logo=dart&logoColor=white" alt="Dart">
   <img src="https://img.shields.io/badge/Platform-Android%20%7C%20Windows-green?style=for-the-badge" alt="Platform">
-  <img src="https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License">
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Status-Closed%20Testing-orange?style=flat-square" alt="Status">
   <img src="https://img.shields.io/badge/Version-1.0.0-blue?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/github/last-commit/Nishanth619/file_share?style=flat-square" alt="Last Commit">
 </p>
+
+---
+
+## 📑 Table of Contents
+
+- [Overview](#-overview)
+- [Features](#-features)
+- [Screenshots](#-screenshots)
+- [Architecture](#️-architecture)
+- [Tech Stack](#️-tech-stack)
+- [Performance](#-performance)
+- [Installation](#-installation)
+- [Download](#-download)
+- [Privacy & Security](#-privacy--security)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Author](#-author)
 
 ---
 
@@ -297,11 +305,21 @@ flutter build windows --release
 - **No File Size Limits** — Send large files without compression
 - **Local Network Only** — Data never leaves your WiFi network
 
+## 🤝 Contributing
+
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting a pull request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'feat: add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
 ---
 
 ## 📄 License
 
-This project is **proprietary software**. All rights reserved.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 © 2026 Nishanth Aradhya
 
