@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/Flutter-3.9.2-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter">
   <img src="https://img.shields.io/badge/Dart-3.0+-0175C2?style=for-the-badge&logo=dart&logoColor=white" alt="Dart">
   <img src="https://img.shields.io/badge/Platform-Android%20%7C%20Windows-green?style=for-the-badge" alt="Platform">
-  <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge" alt="License">
 </p>
 
 <p align="center">
@@ -319,7 +319,11 @@ Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTIN
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is **proprietary software**. All rights reserved.
+
+You may view this code for educational purposes only. Copying, modifying, distributing, or using any part of this code in your own projects is strictly prohibited without written permission.
+
+See the [LICENSE](LICENSE) file for details.
 
 © 2026 Nishanth Aradhya
 
