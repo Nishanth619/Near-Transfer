@@ -1,12 +1,19 @@
+import 'dart:io' show Platform;
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../features/clipboard_sync/models/clipboard_item.dart';
 
+/// Check if running on desktop (Windows/macOS/Linux)
+bool get _isDesktop => !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
+
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
   static Database? _database;
+  static bool _ffiInitialized = false;
 
   factory DatabaseService() {
     return _instance;
@@ -14,20 +21,43 @@ class DatabaseService {
 
   DatabaseService._internal();
 
+  /// Initialize FFI for desktop platforms
+  void _initFfiIfNeeded() {
+    if (_isDesktop && !_ffiInitialized) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+      _ffiInitialized = true;
+    }
+  }
+
   Future<Database> get database async {
     // SQLite is not supported on web
     if (kIsWeb) {
       throw UnsupportedError('Database not supported on web platform');
     }
+    
+    // Initialize FFI for desktop
+    _initFfiIfNeeded();
+    
     if (_database != null) return _database!;
     _database = await _initDatabase();
     return _database!;
   }
 
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'near_transfer.db');
+    String dbPath;
+    
+    if (_isDesktop) {
+      // On desktop, use application documents directory
+      final appDir = await getApplicationDocumentsDirectory();
+      dbPath = join(appDir.path, 'near_transfer.db');
+    } else {
+      // On mobile, use default sqflite path
+      dbPath = join(await getDatabasesPath(), 'near_transfer.db');
+    }
+    
     return await openDatabase(
-      path,
+      dbPath,
       version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,

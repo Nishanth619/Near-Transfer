@@ -99,6 +99,7 @@ class _ReceivingProgressScreenState extends State<ReceivingProgressScreen> {
                           etaText: state == TransferState.transferring 
                               ? 'ETA: ${widget.orchestrator.etaString}' 
                               : null,
+                          isPaused: state == TransferState.paused,
                         ),
                         const SizedBox(height: 16),
                       ],
@@ -111,7 +112,7 @@ class _ReceivingProgressScreenState extends State<ReceivingProgressScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.2),
+                          color: Colors.orange.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.orange, width: 2),
                         ),
@@ -141,10 +142,10 @@ class _ReceivingProgressScreenState extends State<ReceivingProgressScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Colors.white.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             width: 1,
                           ),
                         ),
@@ -300,7 +301,7 @@ class _ReceivingProgressScreenState extends State<ReceivingProgressScreen> {
       width: 60,
       height: 60,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         shape: BoxShape.circle,
       ),
       child: Icon(
@@ -333,8 +334,8 @@ class _ReceivingProgressScreenState extends State<ReceivingProgressScreen> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: status == 'transferring' 
-            ? Colors.white.withOpacity(0.15) 
-            : Colors.white.withOpacity(0.05),
+            ? Colors.white.withValues(alpha: 0.15) 
+            : Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -362,7 +363,7 @@ class _ReceivingProgressScreenState extends State<ReceivingProgressScreen> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.2),
+                color: Colors.green.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.check_circle, size: 20, color: Colors.green),
@@ -372,7 +373,7 @@ class _ReceivingProgressScreenState extends State<ReceivingProgressScreen> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.2),
+                color: Colors.orange.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.pause_circle, size: 20, color: Colors.orange),
@@ -403,7 +404,7 @@ class _ReceivingProgressScreenState extends State<ReceivingProgressScreen> {
                   _formatBytes(file.size),
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.6),
+                    color: Colors.white.withValues(alpha: 0.6),
                   ),
                 ),
               ],

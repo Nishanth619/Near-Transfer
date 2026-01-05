@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../shared/widgets/animated_background.dart';
 import '../../../shared/widgets/help_button.dart';
+import '../../../shared/widgets/banner_ad_widget.dart';
 import '../../../core/constants.dart';
 import '../models/app_item.dart';
 import '../services/app_service.dart';
@@ -137,9 +138,8 @@ class _AppManagerScreenState extends State<AppManagerScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         title: Text(
           _selectedApps.isEmpty
@@ -178,25 +178,8 @@ class _AppManagerScreenState extends State<AppManagerScreen>
           tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
         ),
       ),
-      body: AnimatedBackground(
-        child: Container(
-          margin: const EdgeInsets.only(top: kToolbarHeight + 100),
-          padding: const EdgeInsets.fromLTRB(
-            AppConstants.spacingMd,
-            AppConstants.spacingMd,
-            AppConstants.spacingMd,
-            0,
-          ),
-          decoration: const BoxDecoration(
-            color: AppColors.surfaceAlt,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(30),
-              topRight: Radius.circular(30),
-            ),
-          ),
-          child: _buildBody(),
-        ),
-      ),
+      backgroundColor: AppColors.surfaceAlt,
+      body: _buildBody(),
       floatingActionButton: _selectedApps.isNotEmpty
           ? FloatingActionButton.extended(
               onPressed: _shareSelectedApps,
@@ -226,7 +209,7 @@ class _AppManagerScreenState extends State<AppManagerScreen>
       children: [
         // Search Bar
         Padding(
-          padding: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: TextField(
             onChanged: (value) {
               setState(() => _searchQuery = value);
@@ -256,7 +239,7 @@ class _AppManagerScreenState extends State<AppManagerScreen>
         // App Count Info
         if (_displayedApps.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -286,7 +269,7 @@ class _AppManagerScreenState extends State<AppManagerScreen>
           child: _displayedApps.isEmpty
               ? _buildEmptyState()
               : ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 100),
+                  padding: const EdgeInsets.only(bottom: 80),
                   itemCount: _displayedApps.length,
                   itemBuilder: (context, index) {
                     final app = _displayedApps[index];
@@ -300,6 +283,12 @@ class _AppManagerScreenState extends State<AppManagerScreen>
                     );
                   },
                 ),
+        ),
+        
+        // Banner Ad at bottom
+        SafeArea(
+          top: false,
+          child: const BannerAdWidget(),
         ),
       ],
     );

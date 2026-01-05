@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../shared/widgets/animated_background.dart';
 import '../../../shared/widgets/help_button.dart';
+import '../../../shared/widgets/banner_ad_widget.dart';
 import '../../../core/constants.dart';
 import '../../../shared/services/discovery_service.dart';
 import '../../../shared/services/signaling_socket_service.dart';
@@ -79,34 +80,28 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
         _localIp = localIp;
       });
       
-      print('🌐 Receiver Local IP: $localIp');
       
       // Generate device ID
       final deviceId = 'device_${DateTime.now().millisecondsSinceEpoch}';
       
       // IMPORTANT: Start signaling server FIRST (before discovery)
       // This ensures TCP port is open when sender scans
-      print('Starting TCP signaling server...');
       await _orchestrator.startReceiving(
         deviceId: deviceId,
         deviceName: deviceName,
         deviceIp: localIp,
       );
-      print('TCP server started on $localIp:45455');
       
       // Link signaling service to discovery service for shake mode sync
       _discoveryService.setSignalingService(signalingService);
       
       // Then start discovery (advertise presence)
-      print('Starting discovery service...');
       await _discoveryService.startDiscovery(deviceName);
-      print('Discovery started');
       
       setState(() {
         _isInitialized = true;
       });
     } catch (e) {
-      print('Error initializing receiver: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -138,7 +133,6 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
       
       return null;
     } catch (e) {
-      print('Error getting local IP: $e');
       return null;
     }
   }
@@ -237,9 +231,8 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         title: const Text('Receive Files', style: TextStyle(color: Colors.white)),
         leading: IconButton(
@@ -253,21 +246,19 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
           ),
         ],
       ),
-      body: AnimatedBackground(
-        child: Container(
-          margin: const EdgeInsets.only(top: kToolbarHeight + 20),
-          padding: const EdgeInsets.all(AppConstants.spacingLg),
-          decoration: const BoxDecoration(
-            color: AppColors.surfaceAlt,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(30),
-              topRight: Radius.circular(30),
-            ),
+      backgroundColor: AppColors.surfaceAlt,
+      body: Column(
+        children: [
+          Expanded(
+            child: !_isInitialized
+                ? const Center(child: CircularProgressIndicator())
+                : _buildContent(),
           ),
-          child: !_isInitialized
-              ? const Center(child: CircularProgressIndicator())
-              : _buildContent(),
-        ),
+          SafeArea(
+            top: false,
+            child: const BannerAdWidget(),
+          ),
+        ],
       ),
     );
   }
@@ -290,7 +281,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(

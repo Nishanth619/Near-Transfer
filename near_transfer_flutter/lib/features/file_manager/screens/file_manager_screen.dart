@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../shared/widgets/animated_background.dart';
 import '../../../shared/widgets/help_button.dart';
+import '../../../shared/widgets/banner_ad_widget.dart';
 import '../../../core/constants.dart';
 import '../models/file_item.dart';
 import '../services/file_system_service.dart';
@@ -276,9 +277,8 @@ class _FileManagerScreenState extends State<FileManagerScreen> with SingleTicker
         }
       },
       child: Scaffold(
-        extendBodyBehindAppBar: true,
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.primary,
           elevation: 0,
           title: Text(
             _isSelectionMode
@@ -316,24 +316,11 @@ class _FileManagerScreenState extends State<FileManagerScreen> with SingleTicker
             tabs: _categories.map((cat) => Tab(text: cat)).toList(),
           ),
         ),
-        body: AnimatedBackground(
-          child: Container(
-            margin: const EdgeInsets.only(top: kToolbarHeight + 40),
-            padding: const EdgeInsets.fromLTRB(
-              AppConstants.spacingMd,
-              AppConstants.spacingMd,
-              AppConstants.spacingMd,
-              0, // No bottom padding here, handled in ListView
-            ),
-            decoration: const BoxDecoration(
-              color: AppColors.surfaceAlt,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(30),
-                topRight: Radius.circular(30),
-              ),
-            ),
-            child: _buildBody(),
-          ),
+        body: Container(
+          color: Theme.of(context).brightness == Brightness.dark 
+              ? AppColors.darkSurface 
+              : AppColors.surfaceAlt,
+          child: _buildBody(),
         ),
         floatingActionButton: _selectedFiles.isNotEmpty
             ? FloatingActionButton.extended(
@@ -429,7 +416,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> with SingleTicker
         // File list
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.only(bottom: 100), // Space for bottom nav
+            padding: const EdgeInsets.only(bottom: 80),
             itemCount: _currentFiles.length,
             itemBuilder: (context, index) {
               final file = _currentFiles[index];
@@ -448,6 +435,12 @@ class _FileManagerScreenState extends State<FileManagerScreen> with SingleTicker
               );
             },
           ),
+        ),
+        
+        // Banner Ad at bottom
+        SafeArea(
+          top: false,
+          child: const BannerAdWidget(),
         ),
       ],
     );

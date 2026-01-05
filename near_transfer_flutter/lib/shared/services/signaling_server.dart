@@ -61,7 +61,6 @@ class SignalingServer {
     );
     _serverUrl = 'http://$localIp:8765';
     
-    print('Signaling server started at $_serverUrl');
     
     // Handle requests
     _server!.listen((HttpRequest request) async {
@@ -158,7 +157,6 @@ class SignalingServer {
             request.response.add(file.bytes!);
             await request.response.close();
             
-            print('📤 Sent virtual file via HTTP: ${file.name} (${file.bytes!.length} bytes)');
             
             // Mark as complete
             if (!_transferCompleters[fileName]!.isCompleted) {
@@ -192,7 +190,6 @@ class SignalingServer {
             await request.response.close();
             await request.response.done;
             
-            print('HTTP Fallback: Served file ${file.name} (${fileSize} bytes)');
             
             // Mark as complete
             if (!_transferCompleters[fileName]!.isCompleted) {
@@ -200,7 +197,6 @@ class SignalingServer {
             }
           }
         } catch (e) {
-          print('Error serving file: $e');
           request.response
             ..statusCode = 500
             ..write('Error reading file: $e')

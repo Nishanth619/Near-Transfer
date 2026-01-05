@@ -72,7 +72,9 @@ class AppListItem extends StatelessWidget {
                     const SizedBox(height: 4),
                     
                     // Version and Size
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
                       children: [
                         Text(
                           'v${app.versionName}',
@@ -81,14 +83,12 @@ class AppListItem extends StatelessWidget {
                             color: Colors.grey[500],
                           ),
                         ),
-                        const SizedBox(width: 8),
                         Text(
                           '•',
                           style: TextStyle(
                             color: Colors.grey[500],
                           ),
                         ),
-                        const SizedBox(width: 8),
                         Text(
                           app.formattedSize,
                           style: TextStyle(
@@ -99,8 +99,7 @@ class AppListItem extends StatelessWidget {
                         ),
                         
                         // System App Badge
-                        if (app.isSystemApp) ...[
-                          const SizedBox(width: 8),
+                        if (app.isSystemApp)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 6,
@@ -119,17 +118,14 @@ class AppListItem extends StatelessWidget {
                               ),
                             ),
                           ),
-                        ],
                         
                         // Large App Warning
-                        if (app.isLargeApp) ...[
-                          const SizedBox(width: 8),
+                        if (app.isLargeApp)
                           Icon(
                             Icons.warning_amber_rounded,
                             size: 14,
                             color: Colors.orange[700],
                           ),
-                        ],
                       ],
                     ),
                   ],

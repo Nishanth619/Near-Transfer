@@ -195,16 +195,63 @@ class _DeviceDiscoveryScreenState extends State<DeviceDiscoveryScreen>
   }
 
   Future<void> _onDeviceTap(DiscoveredDevice device) async {
+    // Show loading dialog immediately
+    String statusText = 'Preparing files...';
+    
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          // Store setDialogState for later updates
+          _updateDialogStatus = (String newStatus) {
+            if (mounted) {
+              setDialogState(() => statusText = newStatus);
+            }
+          };
+          
+          return AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(statusText),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () {
+                    _orchestrator.reset();
+                    Navigator.pop(dialogContext);
+                  },
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+    
+    // If no files selected, pick files
     if (_selectedFiles.isEmpty) {
+      _updateDialogStatus?.call('Select files to send...');
+      
       final result = await FilePicker.platform.pickFiles(
         allowMultiple: true,
         type: FileType.any,
       );
       
-      if (result == null || result.files.isEmpty) return;
+      if (result == null || result.files.isEmpty) {
+        if (mounted) Navigator.pop(context);
+        return;
+      }
       
       _selectedFiles = result.files;
     }
+    
+    // Update status to connecting
+    _updateDialogStatus?.call('Connecting to ${device.deviceName}...');
     
     void acceptListener() {
       if (_orchestrator.state == TransferState.connected || 
@@ -230,40 +277,19 @@ class _DeviceDiscoveryScreenState extends State<DeviceDiscoveryScreen>
     }
     
     _orchestrator.addListener(acceptListener);
-    
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text('Connecting to ${device.deviceName}...'),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () {
-                _orchestrator.removeListener(acceptListener);
-                _orchestrator.reset();
-                Navigator.pop(context);
-              },
-              child: const Text('Cancel'),
-            ),
-          ],
-        ),
-      ),
-    );
-    
     _orchestrator.connectToDevice(device, _selectedFiles);
   }
+  
+  // Callback to update dialog status text
+  void Function(String)? _updateDialogStatus;
 
   void _handleTransferComplete() {}
 
   void _handleError(String error) {
     if (!mounted) return;
-    Navigator.pop(context);
+    // Use GoRouter to navigate back safely instead of Navigator.pop
+    // This prevents the "no pages left" error
+    context.go('/');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(error), backgroundColor: Colors.red),
     );
@@ -326,7 +352,7 @@ class _DeviceDiscoveryScreenState extends State<DeviceDiscoveryScreen>
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
+                              color: AppColors.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
@@ -394,50 +420,49 @@ class _DeviceDiscoveryScreenState extends State<DeviceDiscoveryScreen>
         aspectRatio: 1,
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: AnimatedBuilder(
-            animation: Listenable.merge([_sweepController, _pulseController]),
-            builder: (context, child) {
-              return CustomPaint(
-                painter: RadarPainter(
-                  sweepAngle: _sweepController.value * 2 * math.pi,
-                  pulseValue: _pulseController.value,
-                ),
-                child: Stack(
-                  children: [
-                    // Center - this device
-                    Center(
-                      child: Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.5),
-                              blurRadius: 10,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.phone_android,
-                          size: 14,
-                          color: Colors.white,
-                        ),
-                      ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final centerX = constraints.maxWidth / 2;
+              final centerY = constraints.maxHeight / 2;
+              final maxRadius = math.min(centerX, centerY) - 30;
+              
+              return AnimatedBuilder(
+                animation: Listenable.merge([_sweepController, _pulseController]),
+                builder: (context, child) {
+                  return CustomPaint(
+                    painter: RadarPainter(
+                      sweepAngle: _sweepController.value * 2 * math.pi,
+                      pulseValue: _pulseController.value,
                     ),
-                    
-                    // Discovered devices
-                    ...devices.map((device) {
-                      final position = _devicePositions[device.deviceId];
-                      if (position == null) return const SizedBox.shrink();
-                      
-                      return LayoutBuilder(
-                        builder: (context, constraints) {
-                          final centerX = constraints.maxWidth / 2;
-                          final centerY = constraints.maxHeight / 2;
-                          final maxRadius = math.min(centerX, centerY) - 30;
+                    child: Stack(
+                      children: [
+                        // Center - this device
+                        Center(
+                          child: Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withValues(alpha: 0.5),
+                                  blurRadius: 10,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.phone_android,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        
+                        // Discovered devices - using Positioned directly as Stack children
+                        ...devices.where((d) => _devicePositions.containsKey(d.deviceId)).map((device) {
+                          final position = _devicePositions[device.deviceId]!;
                           
                           return Positioned(
                             left: centerX + position.dx * maxRadius - 22,
@@ -447,11 +472,11 @@ class _DeviceDiscoveryScreenState extends State<DeviceDiscoveryScreen>
                               child: _buildDeviceMarker(device),
                             ),
                           );
-                        },
-                      );
-                    }),
-                  ],
-                ),
+                        }),
+                      ],
+                    ),
+                  );
+                },
               );
             },
           ),
@@ -626,7 +651,7 @@ class _DeviceDiscoveryScreenState extends State<DeviceDiscoveryScreen>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -667,7 +692,7 @@ class _DeviceDiscoveryScreenState extends State<DeviceDiscoveryScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.radar, size: 80, color: Colors.grey.withOpacity(0.3)),
+          Icon(Icons.radar, size: 80, color: Colors.grey.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
           const Text(
             'Scanning for devices...',
@@ -733,7 +758,7 @@ class RadarPainter extends CustomPainter {
     
     // Concentric circles
     final circlePaint = Paint()
-      ..color = Colors.grey.withOpacity(0.15)
+      ..color = Colors.grey.withValues(alpha: 0.15)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     
@@ -760,9 +785,9 @@ class RadarPainter extends CustomPainter {
         startAngle: sweepAngle - math.pi / 4,
         endAngle: sweepAngle,
         colors: [
-          const Color(0xFF22C55E).withOpacity(0.0),
-          const Color(0xFF22C55E).withOpacity(0.2),
-          const Color(0xFF22C55E).withOpacity(0.5),
+          const Color(0xFF22C55E).withValues(alpha: 0.0),
+          const Color(0xFF22C55E).withValues(alpha: 0.2),
+          const Color(0xFF22C55E).withValues(alpha: 0.5),
         ],
         stops: const [0.0, 0.7, 1.0],
         transform: GradientRotation(sweepAngle - math.pi / 4),

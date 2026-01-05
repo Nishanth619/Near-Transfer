@@ -3,24 +3,44 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart' as permission_handler;
 import '../models/file_item.dart';
 
+/// Check if running on desktop (Windows/macOS/Linux)
+bool get _isDesktop => Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+
 class FileSystemService {
   /// Get common storage directories
   Future<Map<String, String>> getStoragePaths() async {
     final paths = <String, String>{};
 
     try {
-      // External storage directory
-      final externalDir = await getExternalStorageDirectory();
-      if (externalDir != null) {
-        final basePath = externalDir.path.split('/Android')[0];
+      if (_isDesktop) {
+        // Desktop: Use standard user directories
+        final homeDir = Platform.environment['USERPROFILE'] ?? 
+                        Platform.environment['HOME'] ?? 
+                        '';
         
-        paths['Internal Storage'] = basePath;
-        paths['Documents'] = '$basePath/Documents';
-        paths['Downloads'] = '$basePath/Download';
-        paths['Pictures'] = '$basePath/Pictures';
-        paths['DCIM'] = '$basePath/DCIM';
-        paths['Music'] = '$basePath/Music';
-        paths['Movies'] = '$basePath/Movies';
+        if (homeDir.isNotEmpty) {
+          paths['Home'] = homeDir;
+          paths['Documents'] = '$homeDir${Platform.pathSeparator}Documents';
+          paths['Downloads'] = '$homeDir${Platform.pathSeparator}Downloads';
+          paths['Pictures'] = '$homeDir${Platform.pathSeparator}Pictures';
+          paths['Music'] = '$homeDir${Platform.pathSeparator}Music';
+          paths['Videos'] = '$homeDir${Platform.pathSeparator}Videos';
+          paths['Desktop'] = '$homeDir${Platform.pathSeparator}Desktop';
+        }
+      } else {
+        // Mobile: Use external storage directory (Android)
+        final externalDir = await getExternalStorageDirectory();
+        if (externalDir != null) {
+          final basePath = externalDir.path.split('/Android')[0];
+          
+          paths['Internal Storage'] = basePath;
+          paths['Documents'] = '$basePath/Documents';
+          paths['Downloads'] = '$basePath/Download';
+          paths['Pictures'] = '$basePath/Pictures';
+          paths['DCIM'] = '$basePath/DCIM';
+          paths['Music'] = '$basePath/Music';
+          paths['Movies'] = '$basePath/Movies';
+        }
       }
     } catch (e) {
       // Error getting storage paths
@@ -201,34 +221,43 @@ class FileSystemService {
 
   /// Request storage permissions
   Future<bool> requestPermissions() async {
-    if (Platform.isAndroid) {
-      // Request manage external storage for Android 11+
-      final status = await permission_handler.Permission.manageExternalStorage.request();
-      if (status.isGranted) return true;
-      
-      // Fallback to storage permission for older Android
-      final storageStatus = await permission_handler.Permission.storage.request();
-      return storageStatus.isGranted;
+    // Only Android needs permission requests
+    // Desktop and iOS don't need storage permissions
+    if (!Platform.isAndroid) {
+      return true;
     }
+
+    // Request manage external storage for Android 11+
+    final status = await permission_handler.Permission.manageExternalStorage.request();
+    if (status.isGranted) return true;
     
-    return true; // iOS doesn't need storage permissions
+    // Fallback to storage permission for older Android
+    final storageStatus = await permission_handler.Permission.storage.request();
+    return storageStatus.isGranted;
   }
 
   /// Check if we have storage permissions
   Future<bool> hasPermissions() async {
-    if (Platform.isAndroid) {
-      // Check manage external storage first
-      if (await permission_handler.Permission.manageExternalStorage.isGranted) return true;
-      
-      // Fallback to storage permission
-      return await permission_handler.Permission.storage.isGranted;
+    // Only Android needs permission checks
+    // Desktop and iOS have full file access
+    if (!Platform.isAndroid) {
+      return true;
     }
+
+    // Check manage external storage first
+    if (await permission_handler.Permission.manageExternalStorage.isGranted) return true;
     
-    return true;
+    // Fallback to storage permission
+    return await permission_handler.Permission.storage.isGranted;
   }
 
   /// Open app settings
   Future<bool> openAppSettings() async {
+    // Only works on mobile
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      return false;
+    }
+    
     // Use permission_handler's built-in function to open app settings
     return await permission_handler.openAppSettings();
   }

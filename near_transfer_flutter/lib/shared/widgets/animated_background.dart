@@ -37,10 +37,10 @@ class AnimatedBackground extends StatelessWidget {
               height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.accentStart.withOpacity(0.3),
+                color: AppColors.accentStart.withValues(alpha: 0.3),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.accentStart.withOpacity(0.3),
+                    color: AppColors.accentStart.withValues(alpha: 0.3),
                     blurRadius: 100,
                     spreadRadius: 50,
                   ),
@@ -60,10 +60,10 @@ class AnimatedBackground extends StatelessWidget {
               height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.accentEnd.withOpacity(0.3),
+                color: AppColors.accentEnd.withValues(alpha: 0.3),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.accentEnd.withOpacity(0.3),
+                    color: AppColors.accentEnd.withValues(alpha: 0.3),
                     blurRadius: 100,
                     spreadRadius: 50,
                   ),

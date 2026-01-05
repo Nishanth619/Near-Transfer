@@ -3,6 +3,7 @@ class NetworkConfig {
   static const String multicastGroup = '239.255.255.250';
   static const int multicastPort = 45454;
   static const int tcpPort = 45455;
+  static const int tcpTransferPort = 45460;  // Direct TCP file transfer port
   static const Duration beaconInterval = Duration(seconds: 3);
   static const Duration deviceTimeout = Duration(seconds: 10);
   

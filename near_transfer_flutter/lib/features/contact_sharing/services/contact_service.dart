@@ -1,6 +1,11 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/contact_item.dart' as models;
+
+/// Check if running on mobile (Android/iOS)
+bool get _isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
 /// Service for managing contacts
 class ContactService {
@@ -10,18 +15,29 @@ class ContactService {
 
   /// Request contacts permission
   Future<bool> requestPermission() async {
+    // Only need to request permission on mobile
+    if (!_isMobile) return true;
+    
     final status = await Permission.contacts.request();
     return status.isGranted;
   }
 
   /// Check if contacts permission is granted
   Future<bool> hasPermission() async {
+    // Desktop doesn't need permission
+    if (!_isMobile) return true;
+    
     final status = await Permission.contacts.status;
     return status.isGranted;
   }
 
   /// Get all contacts from device
   Future<List<models.ContactItem>> getAllContacts() async {
+    // Contacts only available on mobile
+    if (!_isMobile) {
+      return [];
+    }
+
     try {
       final hasPerms = await hasPermission();
       if (!hasPerms) {
@@ -36,7 +52,6 @@ class ContactService {
       
       return contacts.map((contact) => _convertToContactItem(contact)).toList();
     } catch (e) {
-      print('Error getting contacts: $e');
       return [];
     }
   }
@@ -55,7 +70,6 @@ class ContactService {
                contact.primaryEmail?.toLowerCase().contains(lowerQuery) == true;
       }).toList();
     } catch (e) {
-      print('Error searching contacts: $e');
       return [];
     }
   }
@@ -109,7 +123,6 @@ class ContactService {
       await contact.insert();
       return true;
     } catch (e) {
-      print('Error saving contact: $e');
       return false;
     }
   }

@@ -80,20 +80,17 @@ class _ShakeConnectScreenState extends State<ShakeConnectScreen> {
         deviceIp: localIp,
       );
       
-      print('✅ Shake screen ready to receive connections on $localIp');
 
       // Link signaling service to discovery service for shake mode
       _discoveryService.setSignalingService(_signalingService);
 
       // Start discovery service IMMEDIATELY so devices can find each other
       await _discoveryService.startDiscovery(deviceName);
-      print('✅ Discovery service started, ready to detect shaking devices');
 
       setState(() {
         _isInitialized = true;
       });
     } catch (e) {
-      print('❌ Error initializing shake connect: $e');
     }
   }
 
@@ -117,7 +114,6 @@ class _ShakeConnectScreenState extends State<ShakeConnectScreen> {
       
       return null;
     } catch (e) {
-      print('Error getting local IP: $e');
       return null;
     }
   }
@@ -146,7 +142,6 @@ class _ShakeConnectScreenState extends State<ShakeConnectScreen> {
     // Ignore if we are acting as SENDER
     if (_hasConnected && _isSender) return;
     
-    print('🔔 INCOMING CONNECTION from $senderName - File: $fileName');
     
     // Stop shake detection and discovery
     _shakeDetector.stopListening();
@@ -207,7 +202,6 @@ class _ShakeConnectScreenState extends State<ShakeConnectScreen> {
     
     final timestamp = _shakeDetector.getShakeTimestamp();
     
-    print('🔔 SHAKE DETECTED! Timestamp: $timestamp');
     
     setState(() {
       _isShaking = true;
@@ -218,7 +212,6 @@ class _ShakeConnectScreenState extends State<ShakeConnectScreen> {
 
     // Enable shake mode in discovery service
     _discoveryService.enableShakeMode(timestamp);
-    print('🔍 Searching for shaking devices...');
 
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_countdown > 0) {
@@ -228,18 +221,14 @@ class _ShakeConnectScreenState extends State<ShakeConnectScreen> {
           _matchedDevices = _discoveryService.shakingDevices;
           
           if (_matchedDevices.isNotEmpty) {
-            print('🎯 FOUND ${_matchedDevices.length} SHAKING DEVICE(S):');
             for (var device in _matchedDevices) {
-              print('   - ${device.deviceName} @ ${device.ip} (timestamp: ${device.shakeTimestamp})');
             }
           } else {
-            print('⏳ Countdown: $_countdown seconds, no matches yet...');
           }
         });
       } else {
         timer.cancel();
         if (_matchedDevices.isEmpty) {
-          print('❌ No shaking devices found after 5 seconds');
         }
         _stopSearching();
       }
@@ -256,7 +245,6 @@ class _ShakeConnectScreenState extends State<ShakeConnectScreen> {
   }
 
   void _handleBusy(String senderName) {
-    print('🔒 Busy signal received from $senderName');
     if (!mounted || _hasConnected) return;
     
     setState(() {
@@ -330,7 +318,6 @@ class _ShakeConnectScreenState extends State<ShakeConnectScreen> {
         });
       }
     } catch (e) {
-      print('Failed to prepare connection: $e');
       setState(() {
         _hasConnected = false;
       });
@@ -387,11 +374,14 @@ class _ShakeConnectScreenState extends State<ShakeConnectScreen> {
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const SizedBox(height: 40),
-                    ShakeAnimationWidget(
-                      isShaking: _isShaking,
-                      size: 150,
+                    Center(
+                      child: ShakeAnimationWidget(
+                        isShaking: _isShaking,
+                        size: 150,
+                      ),
                     ),
                     const SizedBox(height: 32),
                     Text(
@@ -429,10 +419,10 @@ class _ShakeConnectScreenState extends State<ShakeConnectScreen> {
                         ),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Colors.white.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                           ),
                         ),
                         child: Column(

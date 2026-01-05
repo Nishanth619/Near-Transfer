@@ -14,13 +14,6 @@ class MoreFeaturesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final features = [
       _FeatureItem(
-        title: 'Phone Clone',
-        subtitle: 'Migrate all your data',
-        icon: Icons.phone_android_rounded,
-        color: const Color(0xFF10B981),
-        route: '/phone-clone',
-      ),
-      _FeatureItem(
         title: 'Browse Files',
         subtitle: 'Explore & manage files',
         icon: Icons.folder_rounded,
@@ -67,101 +60,91 @@ class MoreFeaturesScreen extends StatelessWidget {
     return Scaffold(
       extendBodyBehindAppBar: true,
       body: AnimatedBackground(
-        child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SafeArea(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                    child: FadeInDown(
-                      child: Row(
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              child: FadeInDown(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.grid_view_rounded,
+                        color: Colors.white,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: const Icon(
-                              Icons.grid_view_rounded,
+                          Text(
+                            'More Features',
+                            style: TextStyle(
                               color: Colors.white,
-                              size: 26,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
                             ),
                           ),
-                          const SizedBox(width: 16),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'More Features',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                                SizedBox(height: 2),
-                                Text(
-                                  'Explore all tools',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
+                          SizedBox(height: 2),
+                          Text(
+                            'Explore all tools',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
                             ),
-                          ),
-                          const HelpButton(
-                            featureName: 'More Features',
-                            helpText: 'Access additional NearTransfer tools:\n\n• Phone Clone: Transfer all data to a new phone\n• Browse Files: Select files to share\n• Share Apps: Send installed apps to other devices\n• Clipboard: Sync copied text between devices\n• Contacts: Share contact cards\n• Shake: Quick connect by shaking phones\n• Speed Test: Check transfer speed',
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  
-                  // Features Grid
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: GridView.builder(
-                        padding: const EdgeInsets.only(bottom: 180), // Extra space for banner
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 0.75,
-                        ),
-                        itemCount: features.length,
-                        itemBuilder: (context, index) {
-                          return FadeInUp(
-                            delay: Duration(milliseconds: 100 * index),
-                            child: _buildFeatureCard(
-                              context,
-                              feature: features[index],
-                            ),
-                          );
-                        },
-                      ),
+                    const HelpButton(
+                      featureName: 'More Features',
+                      helpText: 'Access additional NearTransfer tools:\n\n• Browse Files: Select files to share\n• Share Apps: Send installed apps to other devices\n• Clipboard: Sync copied text between devices\n• Contacts: Share contact cards\n• Shake: Quick connect by shaking phones\n• Speed Test: Check transfer speed',
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-            // Banner Ad at absolute bottom (below floating nav bar)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: SafeArea(
-                top: false,
-                child: const Center(child: BannerAdWidget()),
+            
+            // Features Grid
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: GridView.builder(
+                  padding: const EdgeInsets.only(bottom: 100),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 1.0,
+                  ),
+                  itemCount: features.length,
+                  itemBuilder: (context, index) {
+                    return FadeInUp(
+                      delay: Duration(milliseconds: 100 * index),
+                      child: _buildFeatureCard(
+                        context,
+                        feature: features[index],
+                      ),
+                    );
+                  },
+                ),
               ),
+            ),
+            
+            // Banner Ad at bottom
+            SafeArea(
+              top: false,
+              child: const BannerAdWidget(),
             ),
           ],
         ),
@@ -213,50 +196,53 @@ class MoreFeaturesScreen extends StatelessWidget {
                 
                 // Content
                 Padding(
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       // Icon container
                       Container(
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: feature.color.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                             color: feature.color.withOpacity(0.3),
-                            width: 1.5,
+                            width: 1,
                           ),
                         ),
                         child: Icon(
                           feature.icon,
-                          size: 36,
+                          size: 28,
                           color: feature.color,
                         ),
                       ),
                       
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       
                       // Title
                       Text(
                         feature.title,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 18,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                       
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       
                       // Subtitle
                       Text(
                         feature.subtitle,
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.7),
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),

@@ -122,7 +122,7 @@ class _CircularProgressPainter extends CustomPainter {
         startAngle: -math.pi / 2,
         endAngle: 3 * math.pi / 2,
         colors: [
-          progressColor.withOpacity(0.6),
+          progressColor.withValues(alpha: 0.6),
           progressColor,
           progressColor,
         ],
@@ -148,7 +148,7 @@ class _CircularProgressPainter extends CustomPainter {
       final tipY = center.dy + radius * math.sin(tipAngle);
       
       final glowPaint = Paint()
-        ..color = progressColor.withOpacity(0.5)
+        ..color = progressColor.withValues(alpha: 0.5)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
       
       canvas.drawCircle(Offset(tipX, tipY), strokeWidth / 2, glowPaint);
@@ -168,6 +168,7 @@ class AnimatedCircularProgress extends StatefulWidget {
   final Color progressColor;
   final String? speedText;
   final String? etaText;
+  final bool isPaused;
 
   const AnimatedCircularProgress({
     super.key,
@@ -176,6 +177,7 @@ class AnimatedCircularProgress extends StatefulWidget {
     this.progressColor = Colors.green,
     this.speedText,
     this.etaText,
+    this.isPaused = false,
   });
 
   @override
@@ -192,7 +194,23 @@ class _AnimatedCircularProgressState extends State<AnimatedCircularProgress>
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
+    );
+    // Only start animation if not paused
+    if (!widget.isPaused) {
+      _pulseController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(AnimatedCircularProgress oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isPaused != widget.isPaused) {
+      if (widget.isPaused) {
+        _pulseController.stop();
+      } else {
+        _pulseController.repeat(reverse: true);
+      }
+    }
   }
 
   @override

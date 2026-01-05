@@ -22,7 +22,6 @@ class TransferResumeUtils {
     try {
       final file = File(filePath);
       if (!await file.exists()) {
-        print('⚠️ File not found for hash calculation: $filePath');
         return null;
       }
 
@@ -30,7 +29,6 @@ class TransferResumeUtils {
       final digest = sha256.convert(bytes);
       return digest.toString();
     } catch (e) {
-      print('❌ Error calculating file hash: $e');
       return null;
     }
   }
@@ -44,14 +42,12 @@ class TransferResumeUtils {
     try {
       final file = File(filePath);
       if (!await file.exists()) {
-        print('⚠️ File not found for hash calculation: $filePath');
         return null;
       }
 
       final digest = await sha256.bind(file.openRead()).first;
       return digest.toString();
     } catch (e) {
-      print('❌ Error calculating file hash: $e');
       return null;
     }
   }
@@ -62,7 +58,6 @@ class TransferResumeUtils {
     if (actualHash == null) return false;
     final matches = actualHash == expectedHash;
     if (!matches) {
-      print('⚠️ Hash mismatch! Expected: $expectedHash, Got: $actualHash');
     }
     return matches;
   }
@@ -147,7 +142,6 @@ class TransferResumeUtils {
       // Partial file should be less than or equal to expected size
       return actualSize <= expectedSize && actualSize > 0;
     } catch (e) {
-      print('❌ Error checking partial file: $e');
       return false;
     }
   }

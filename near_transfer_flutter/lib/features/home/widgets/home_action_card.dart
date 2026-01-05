@@ -21,76 +21,92 @@ class HomeActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 900;
+    
+    // Responsive sizes
+    final cardHeight = isDesktop ? 150.0 : 120.0;
+    final iconSize = isDesktop ? 52.0 : 40.0;
+    final iconContainerPadding = isDesktop ? 16.0 : 12.0;
+    final titleFontSize = isDesktop ? 30.0 : 24.0;
+    final subtitleFontSize = isDesktop ? 16.0 : 14.0;
+    final arrowSize = isDesktop ? 20.0 : 16.0;
+    
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
         onTap();
       },
-      child: GlassmorphicContainer(
-        width: double.infinity,
-        height: 120,
-        borderRadius: AppConstants.radiusLarge,
-        blur: 20,
-        alignment: Alignment.center,
-        border: 2,
-        linearGradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withOpacity(0.1),
-            Colors.white.withOpacity(0.05),
-          ],
-        ),
-        borderGradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withOpacity(0.5),
-            Colors.white.withOpacity(0.1),
-          ],
-        ),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacingMd),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 40),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.arrow_forward_ios_rounded, 
-                color: Colors.white.withOpacity(0.3), 
-                size: 16
-              ),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GlassmorphicContainer(
+          width: double.infinity,
+          height: cardHeight,
+          borderRadius: AppConstants.radiusLarge,
+          blur: 20,
+          alignment: Alignment.center,
+          border: 2,
+          linearGradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: 0.1),
+              Colors.white.withValues(alpha: 0.05),
             ],
+          ),
+          borderGradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: 0.5),
+              Colors.white.withValues(alpha: 0.1),
+            ],
+          ),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isDesktop ? AppConstants.spacingLg : AppConstants.spacingMd,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(iconContainerPadding),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: iconSize),
+                ),
+                SizedBox(width: isDesktop ? 24 : 16),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: titleFontSize,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: isDesktop ? 6 : 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: subtitleFontSize,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios_rounded, 
+                  color: Colors.white.withValues(alpha: 0.3), 
+                  size: arrowSize
+                ),
+              ],
+            ),
           ),
         ),
       ),

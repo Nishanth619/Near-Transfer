@@ -18,20 +18,20 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# VS Code
+.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
 /coverage/
+pubspec.lock
 
 # Symbolication related
 app.*.symbols
@@ -50,3 +50,80 @@ android/app/*.jks
 android/app/*.keystore
 *.keystore
 *.jks
+upload-keystore.jks
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Firebase configuration (if any)
+google-services.json
+GoogleService-Info.plist
+
+# AdMob production IDs (use placeholders in committed code)
+# lib/core/ad_config_production.dart
+
+# Local configuration override
+local.properties
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+
+# Test coverage
+coverage/
+.test_coverage.dart
+
+# macOS
+*.dmg
+*.pkg
+.DS_Store
+**/.DS_Store
+
+# Windows
+*.exe
+*.dll
+*.pdb
+Thumbs.db
+
+# Linux
+*.AppImage
+*.snap
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+~*
+
+# IDE
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+
+# Build artifacts
+/ios/Pods/
+/ios/.symlinks/
+/ios/Flutter/Flutter.framework
+/ios/Flutter/Flutter.podspec
+/ios/ServiceDefinitions.json
+/ios/Runner/GeneratedPluginRegistrant.*
+
+# Android specific
+/android/.gradle
+/android/gradle
+/android/gradlew
+/android/gradlew.bat
+/android/local.properties
+/android/captures/
+/android/app/libs
+/android/app/.classpath
+/android/app/.project
+/android/app/.settings/
+
+# Exceptions - Files to include
+!.gitkeep

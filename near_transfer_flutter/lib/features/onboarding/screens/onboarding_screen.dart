@@ -19,6 +19,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   
   final List<OnboardingPage> _pages = [
     OnboardingPage(
+      icon: Icons.devices,
+      title: 'Cross-Platform',
+      description: 'Transfer files between Android, Windows, macOS, and Linux. Works on phones and PCs!',
+      color: Colors.teal,
+    ),
+    OnboardingPage(
       icon: Icons.wifi,
       title: 'Same WiFi Required',
       description: 'Both devices must be connected to the same WiFi network for file transfer.',
@@ -51,8 +57,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _completeOnboarding() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_onboardingCompleteKey, true);
+    // Save onboarding complete flag with verification
+    bool saved = false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      saved = await prefs.setBool(_onboardingCompleteKey, true);
+      
+      // Verify it was actually saved
+      if (saved) {
+        // Force read back to verify
+        final verify = prefs.getBool(_onboardingCompleteKey);
+        if (verify != true) {
+          // Try again
+          await prefs.setBool(_onboardingCompleteKey, true);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error saving onboarding state: $e');
+    }
+    
+    // Small delay to ensure filesystem write completes
+    await Future.delayed(const Duration(milliseconds: 100));
+    
     widget.onComplete();
   }
 
@@ -70,8 +96,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              _pages[_currentPage].color.withOpacity(0.8),
-              _pages[_currentPage].color.withOpacity(0.4),
+              _pages[_currentPage].color.withValues(alpha: 0.8),
+              _pages[_currentPage].color.withValues(alpha: 0.4),
               Colors.black87,
             ],
           ),
@@ -115,7 +141,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     decoration: BoxDecoration(
                       color: _currentPage == index 
                           ? Colors.white 
-                          : Colors.white.withOpacity(0.3),
+                          : Colors.white.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   );
@@ -199,15 +225,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           FadeInDown(
             key: ValueKey(index),
             child: Container(
-              width: 120,
-              height: 120,
+              width: 90,
+              height: 90,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  width: 2,
+                ),
               ),
               child: Icon(
                 page.icon,
-                size: 60,
+                size: 48,
                 color: Colors.white,
               ),
             ),
@@ -240,7 +270,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               page.description,
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.white.withOpacity(0.85),
+                color: Colors.white.withValues(alpha: 0.85),
                 height: 1.5,
               ),
               textAlign: TextAlign.center,

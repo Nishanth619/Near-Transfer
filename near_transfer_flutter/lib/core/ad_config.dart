@@ -18,6 +18,7 @@ class AdConfig {
   static const String productionRewardedAdId = 'YOUR_REWARDED_AD_UNIT_ID'; // Add when needed
   
   // ⚠️ Set to FALSE for production release builds!
+  // Currently TRUE for testing - change to FALSE before publishing!
   static const bool useTestAds = false;
   
   // Get the appropriate app ID based on mode

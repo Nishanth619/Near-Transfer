@@ -62,7 +62,7 @@ class _ShakeAnimationWidgetState extends State<ShakeAnimationWidget>
             width: widget.size,
             height: widget.size,
             decoration: BoxDecoration(
-              color: const Color(0xFF6C63FF).withOpacity(0.2),
+              color: const Color(0xFF6C63FF).withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(

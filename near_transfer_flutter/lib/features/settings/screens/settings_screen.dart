@@ -5,8 +5,8 @@ import '../../../shared/providers/theme_provider.dart';
 import '../../../shared/providers/settings_provider.dart';
 import '../../../shared/services/subscription_service.dart';
 import '../../../shared/widgets/help_button.dart';
+import '../../../shared/widgets/banner_ad_widget.dart';
 import '../widgets/settings_tile.dart';
-import '../widgets/theme_mode_selector.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -53,27 +53,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).primaryColor;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        title: const Text(
-          'Settings',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        actions: const [
-          HelpButton(
-            featureName: 'Settings',
-            helpText: 'Customize your NearTransfer experience.\n\n• Device: Set your device name and visibility\n• Transfer: Configure download location and file handling\n• Notifications: Control alerts and sounds\n• Theme: Switch between light and dark mode',
-            iconColor: Colors.black87,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          context.go('/home');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F5F5),
+        appBar: AppBar(
+          title: const Text(
+            'Settings',
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: Colors.white,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.go('/home'),
+          ),
+          actions: const [
+            HelpButton(
+              featureName: 'Settings',
+              helpText: 'Customize your NearTransfer experience.\n\n• Device: Set your device name and visibility\n• Transfer: Configure download location and file handling\n• Notifications: Control alerts and sounds',
+              iconColor: Colors.black87,
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
           // Device Section
           _buildSectionHeader('Device'),
           const SizedBox(height: 8),
@@ -113,54 +127,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const Divider(height: 1),
             SettingsTile(
-              icon: Icons.check_circle,
-              title: 'Auto Accept Files',
-              subtitle: 'Accept files automatically from all devices',
-              trailing: Switch(
-                value: settingsProvider.autoAccept,
-                onChanged: (value) => settingsProvider.setAutoAccept(value),
-                activeColor: primaryColor,
-              ),
-            ),
-            const Divider(height: 1),
-            SettingsTile(
-              icon: Icons.speed,
-              title: 'Concurrent Transfers',
-              subtitle: '${settingsProvider.maxConcurrentTransfers} files at once',
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _showConcurrentTransfersDialog(context, settingsProvider),
-            ),
-            const Divider(height: 1),
-            SettingsTile(
-              icon: Icons.compress,
-              title: 'Compress Files',
-              subtitle: 'Compress before sending (slower but smaller)',
-              trailing: Switch(
-                value: settingsProvider.compressionEnabled,
-                onChanged: (value) => settingsProvider.setCompressionEnabled(value),
-                activeColor: primaryColor,
-              ),
-            ),
-            const Divider(height: 1),
-            SettingsTile(
-              icon: Icons.delete_sweep,
-              title: 'Delete After Send',
-              subtitle: 'Remove files after successful transfer',
-              trailing: Switch(
-                value: settingsProvider.deleteAfterSend,
-                onChanged: (value) => settingsProvider.setDeleteAfterSend(value),
-                activeColor: primaryColor,
-              ),
-            ),
-          ]),
-
-          const SizedBox(height: 24),
-
-          // Receiving Section
-          _buildSectionHeader('Receiving'),
-          const SizedBox(height: 8),
-          _buildCard([
-            SettingsTile(
               icon: Icons.photo_library,
               title: 'Save to Gallery',
               subtitle: 'Save media files to gallery automatically',
@@ -172,159 +138,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const Divider(height: 1),
             SettingsTile(
-              icon: Icons.open_in_new,
-              title: 'Auto Open Files',
-              subtitle: 'Open files after receiving',
-              trailing: Switch(
-                value: settingsProvider.autoOpenFiles,
-                onChanged: (value) => settingsProvider.setAutoOpenFiles(value),
-                activeColor: primaryColor,
-              ),
-            ),
-            const Divider(height: 1),
-            SettingsTile(
-              icon: Icons.preview,
-              title: 'Show Preview',
-              subtitle: 'Show file preview during transfer',
-              trailing: Switch(
-                value: settingsProvider.showPreview,
-                onChanged: (value) => settingsProvider.setShowPreview(value),
-                activeColor: primaryColor,
-              ),
-            ),
-          ]),
-
-          const SizedBox(height: 24),
-
-          // Connection Section
-          _buildSectionHeader('Connection'),
-          const SizedBox(height: 8),
-          _buildCard([
-            SettingsTile(
-              icon: Icons.wifi,
-              title: 'WiFi Only',
-              subtitle: 'Transfer only when connected to WiFi',
-              trailing: Switch(
-                value: settingsProvider.wifiOnly,
-                onChanged: (value) => settingsProvider.setWifiOnly(value),
-                activeColor: primaryColor,
-              ),
-            ),
-            const Divider(height: 1),
-            SettingsTile(
-              icon: Icons.link,
-              title: 'Auto Connect',
-              subtitle: 'Automatically connect to known devices',
-              trailing: Switch(
-                value: settingsProvider.autoConnect,
-                onChanged: (value) => settingsProvider.setAutoConnect(value),
-                activeColor: primaryColor,
-              ),
-            ),
-            const Divider(height: 1),
-            SettingsTile(
-              icon: Icons.screen_lock_portrait,
-              title: 'Keep Screen On',
-              subtitle: 'Prevent screen from sleeping during transfer',
-              trailing: Switch(
-                value: settingsProvider.keepScreenOn,
-                onChanged: (value) => settingsProvider.setKeepScreenOn(value),
-                activeColor: primaryColor,
-              ),
-            ),
-          ]),
-
-          const SizedBox(height: 24),
-
-          // Security Section
-          _buildSectionHeader('Security'),
-          const SizedBox(height: 8),
-          _buildCard([
-            SettingsTile(
-              icon: Icons.lock,
-              title: 'Encryption',
-              subtitle: 'Encrypt files during transfer',
-              trailing: Switch(
-                value: settingsProvider.encryptionEnabled,
-                onChanged: (value) => settingsProvider.setEncryptionEnabled(value),
-                activeColor: primaryColor,
-              ),
-            ),
-          ]),
-
-          const SizedBox(height: 24),
-
-          // Notifications Section
-          _buildSectionHeader('Notifications'),
-          const SizedBox(height: 8),
-          _buildCard([
-            SettingsTile(
               icon: Icons.notifications,
-              title: 'Push Notifications',
+              title: 'Notifications',
               subtitle: 'Receive transfer notifications',
               trailing: Switch(
                 value: settingsProvider.showNotifications,
                 onChanged: (value) => settingsProvider.setShowNotifications(value),
                 activeColor: primaryColor,
               ),
-            ),
-            const Divider(height: 1),
-            SettingsTile(
-              icon: Icons.volume_up,
-              title: 'Sound',
-              subtitle: 'Play sound on transfer complete',
-              trailing: Switch(
-                value: settingsProvider.soundEnabled,
-                onChanged: (value) => settingsProvider.setSoundEnabled(value),
-                activeColor: primaryColor,
-              ),
-            ),
-            const Divider(height: 1),
-            SettingsTile(
-              icon: Icons.vibration,
-              title: 'Vibration',
-              subtitle: 'Vibrate on transfer complete',
-              trailing: Switch(
-                value: settingsProvider.vibrationEnabled,
-                onChanged: (value) => settingsProvider.setVibrationEnabled(value),
-                activeColor: primaryColor,
-              ),
-            ),
-          ]),
-
-          const SizedBox(height: 24),
-
-          // Appearance Section
-          _buildSectionHeader('Appearance'),
-          const SizedBox(height: 8),
-          _buildCard([
-            SettingsTile(
-              icon: Icons.brightness_6,
-              title: 'Theme',
-              subtitle: _getThemeModeText(themeProvider.themeMode),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _showThemeModeSelector(context),
-            ),
-          ]),
-
-          const SizedBox(height: 24),
-
-          // Storage Section
-          _buildSectionHeader('Storage'),
-          const SizedBox(height: 8),
-          _buildCard([
-            SettingsTile(
-              icon: Icons.cleaning_services,
-              title: 'Clear Cache',
-              subtitle: 'Free up space',
-              onTap: () => _showClearCacheDialog(context),
-            ),
-            const Divider(height: 1),
-            SettingsTile(
-              icon: Icons.history,
-              title: 'Clear History',
-              subtitle: 'Delete all transfer history',
-              onTap: () => _showClearHistoryDialog(context),
             ),
           ]),
 
@@ -386,27 +207,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 24),
 
-          // Help Section
-          _buildSectionHeader('Help & Support'),
+          // Support Section
+          _buildSectionHeader('Support'),
           const SizedBox(height: 8),
           _buildCard([
             SettingsTile(
-              icon: Icons.help_outline,
-              title: 'Help Center',
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _showHelpDialog(context),
-            ),
-            const Divider(height: 1),
-            SettingsTile(
-              icon: Icons.bug_report,
-              title: 'Report a Bug',
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _showReportBugDialog(context),
-            ),
-            const Divider(height: 1),
-            SettingsTile(
               icon: Icons.share,
               title: 'Share App',
+              subtitle: 'Share with friends',
               onTap: () => Share.share(
                 'Check out NearTransfer - Fast file sharing app!\nhttps://play.google.com/store/apps/details?id=com.neartransfer.app',
               ),
@@ -415,6 +223,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             SettingsTile(
               icon: Icons.star,
               title: 'Rate Us',
+              subtitle: 'Love the app? Rate us!',
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _showRateDialog(context),
             ),
@@ -433,25 +242,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const Divider(height: 1),
             SettingsTile(
-              icon: Icons.description_outlined,
-              title: 'Licenses',
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => showLicensePage(
-                context: context,
-                applicationName: 'NearTransfer',
-                applicationVersion: _appVersion,
-                applicationIcon: Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Icon(
-                    Icons.near_me,
-                    size: 48,
-                    color: primaryColor,
-                  ),
-                ),
-              ),
-            ),
-            const Divider(height: 1),
-            SettingsTile(
               icon: Icons.privacy_tip_outlined,
               title: 'Privacy Policy',
               trailing: const Icon(Icons.chevron_right),
@@ -466,20 +256,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ]),
 
-          const SizedBox(height: 24),
-
-          // Reset Section
-          _buildCard([
-            SettingsTile(
-              icon: Icons.restore,
-              title: 'Reset All Settings',
-              subtitle: 'Reset to default settings',
-              onTap: () => _showResetSettingsDialog(context, settingsProvider),
+          const SizedBox(height: 40),
+                ],
+              ),
             ),
-          ]),
-
-          const SizedBox(height: 100),
-        ],
+            SafeArea(
+              top: false,
+              child: const BannerAdWidget(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -500,41 +286,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildCard(List<Widget> children) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(children: children),
-    );
-  }
-
-  String _getThemeModeText(ThemeMode mode) {
-    switch (mode) {
-      case ThemeMode.light:
-        return 'Light';
-      case ThemeMode.dark:
-        return 'Dark';
-      case ThemeMode.system:
-        return 'System default';
-    }
-  }
-
-  void _showThemeModeSelector(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => const ThemeModeSelector(),
     );
   }
 
@@ -631,226 +395,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showConcurrentTransfersDialog(BuildContext context, SettingsProvider settings) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Concurrent Transfers',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Maximum number of files to transfer at once',
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 16),
-            ...List.generate(5, (index) {
-              final value = index + 1;
-              return ListTile(
-                title: Text('$value ${value == 1 ? 'file' : 'files'}'),
-                trailing: settings.maxConcurrentTransfers == value
-                    ? const Icon(Icons.check, color: Colors.green)
-                    : null,
-                onTap: () {
-                  settings.setMaxConcurrentTransfers(value);
-                  Navigator.pop(context);
-                },
-              );
-            }),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showClearCacheDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear Cache'),
-        content: const Text('Are you sure you want to clear all cached data?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Cache cleared successfully')),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Clear'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showClearHistoryDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear History'),
-        content: const Text('Are you sure you want to delete all transfer history? This cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('History cleared successfully')),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Clear'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showResetSettingsDialog(BuildContext context, SettingsProvider settings) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset Settings'),
-        content: const Text('Are you sure you want to reset all settings to their default values?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              settings.resetToDefaults();
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Settings reset to defaults')),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Reset'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showHelpDialog(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (context, scrollController) => Container(
-          padding: const EdgeInsets.all(24),
-          child: ListView(
-            controller: scrollController,
-            children: [
-              const Text(
-                'Help Center',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 24),
-              _buildHelpItem(
-                'How to send files?',
-                '1. Tap "Send Files" on the home screen\n2. Select files you want to send\n3. Choose a nearby device\n4. Wait for the transfer to complete',
-              ),
-              _buildHelpItem(
-                'How to receive files?',
-                '1. Tap "Receive Files" on the home screen\n2. Your device will be visible to others\n3. Accept incoming file requests\n4. Files will be saved to your download folder',
-              ),
-              _buildHelpItem(
-                'Shake to Connect',
-                'Shake your phone while the other person does the same to quickly connect and transfer files.',
-              ),
-              _buildHelpItem(
-                'Troubleshooting',
-                '• Make sure both devices are on the same WiFi network\n• Enable WiFi and location services\n• Grant all required permissions\n• Try restarting the app',
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHelpItem(String title, String content) {
-    return ExpansionTile(
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(content),
-        ),
-      ],
-    );
-  }
-
-  void _showReportBugDialog(BuildContext context) {
-    final TextEditingController bugController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Report a Bug'),
-        content: TextField(
-          controller: bugController,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            hintText: 'Describe the issue you encountered...',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Thank you for your feedback!')),
-              );
-            },
-            child: const Text('Submit'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showRateDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -912,18 +456,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               SizedBox(height: 16),
               Text(
-                'Last updated: December 2024\n\n'
-                'NearTransfer respects your privacy and is committed to protecting your personal data.\n\n'
-                '1. DATA COLLECTION\n'
-                'We do not collect or store any personal information. All file transfers occur directly between devices without going through our servers.\n\n'
-                '2. PERMISSIONS\n'
-                'The app requires certain permissions (WiFi, Storage, Location) solely for the purpose of file discovery and transfer. We do not access your data for any other purpose.\n\n'
-                '3. LOCAL STORAGE\n'
-                'App settings and transfer history are stored locally on your device and are never uploaded.\n\n'
-                '4. THIRD PARTY\n'
-                'We do not share any data with third parties.\n\n'
-                '5. CONTACT\n'
-                'If you have questions about this policy, please contact us.',
+                'Effective Date: January 1, 2026\n\n'
+                'NearTransfer ("we," "our," or "us") respects your privacy and is committed to protecting your personal data.\n\n'
+                '1. INFORMATION WE DO NOT COLLECT\n'
+                '• We do NOT collect the content of files you transfer\n'
+                '• We do NOT collect your contacts or location\n'
+                '• We do NOT require login credentials\n'
+                '• All file transfers happen directly between devices\n\n'
+                '2. PERMISSIONS USED\n'
+                '• Internet: Display advertisements\n'
+                '• WiFi/Network: Discover nearby devices, transfer files\n'
+                '• Storage: Access files to send, save received files\n'
+                '• Contacts: Only when you use Contact Sharing feature\n'
+                '• Query All Packages: Only for App Sharing feature\n\n'
+                'Note: Contacts are accessed only when you explicitly choose to use the Contact Sharing feature and are never collected, stored, or transmitted to our servers.\n\n'
+                'Important: NearTransfer does not track app usage or analytics related to installed applications. Installed app information is used only for user-initiated sharing.\n\n'
+                '3. ADVERTISING\n'
+                'We use Google AdMob to display ads. AdMob may collect device identifiers for personalized advertising. You can opt out in your device\'s Google settings.\n\n'
+                '4. IN-APP PURCHASES\n'
+                'Premium purchases are processed through Google Play Billing. We receive only purchase confirmation, not your payment details.\n\n'
+                '5. DATA SECURITY\n'
+                'All transfers happen over your local WiFi network. Files are NOT routed through our servers. We recommend using secure networks.\n\n'
+                '6. CHILDREN\'S PRIVACY\n'
+                'NearTransfer is not intended for children under 13.\n\n'
+                '7. CONTACT US\n'
+                'Email: agnishanth609@gmail.com\n'
+                'We aim to respond within 48 hours.',
                 style: TextStyle(height: 1.6),
               ),
             ],
@@ -956,18 +514,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               SizedBox(height: 16),
               Text(
-                'Last updated: December 2024\n\n'
+                'Effective Date: January 1, 2026\n\n'
                 'By using NearTransfer, you agree to these terms.\n\n'
-                '1. USE OF SERVICE\n'
-                'NearTransfer is provided for personal, non-commercial use. You may use it to transfer files between your devices.\n\n'
+                '1. DESCRIPTION OF SERVICE\n'
+                'NearTransfer is a cross-platform file sharing app that enables seamless transfer between Android and Windows devices on the same WiFi network. Features include: File Transfer, App Sharing, Contact Sharing, Shake Connect, Group Transfer, Clipboard Sync, and Speed Test.\n\n'
                 '2. USER RESPONSIBILITIES\n'
-                'You are responsible for the content you transfer. Do not use the app for illegal activities or to share copyrighted content without permission.\n\n'
-                '3. DISCLAIMER\n'
-                'The app is provided "as is" without warranties. We are not responsible for data loss during transfers.\n\n'
-                '4. UPDATES\n'
-                'We may update these terms from time to time. Continued use of the app constitutes acceptance of new terms.\n\n'
-                '5. CONTACT\n'
-                'For questions about these terms, please contact us.',
+                'You are solely responsible for files you transfer and must ensure you have legal rights to share any content.\n\n'
+                '3. PROHIBITED CONTENT\n'
+                'You must NOT use NearTransfer to transfer:\n'
+                '• Copyrighted material without authorization\n'
+                '• Malware, viruses, or harmful software\n'
+                '• Illegal content of any kind\n'
+                '• Content exploiting minors\n\n'
+                'Security Notice: Installing APK files from external sources may pose security risks. Verify the source before installation.\n\n'
+                '4. PREMIUM FEATURES\n'
+                '"Remove Ads" is a one-time purchase. All purchases and refunds are handled by Google Play in accordance with their refund policies.\n\n'
+                '5. DISCLAIMER\n'
+                'The app is provided "as is" without warranties. We are not responsible for data loss during transfers or unauthorized access on unsecured networks.\n\n'
+                '6. LIMITATION OF LIABILITY\n'
+                'We shall not be liable for any indirect, incidental, or consequential damages.\n\n'
+                '7. GOVERNING LAW\n'
+                'These terms are governed by the laws of India.\n\n'
+                '8. CONTACT US\n'
+                'Email: agnishanth609@gmail.com\n'
+                'We aim to respond within 48 hours.',
                 style: TextStyle(height: 1.6),
               ),
             ],

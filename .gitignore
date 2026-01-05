@@ -1,92 +1,15 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# NearTransfer Flutter Project
+# This repository contains only the Flutter app
 
-# IDE and editors
-.idea/
-.vscode/
+# Exclude non-Flutter directories
+/backend/
+/frontend/
+/tests/
+/.emergent/
 
-# Dependencies
-node_modules/
-/node_modules
-/.pnp
-.pnp.js
-.yarn/install-state.gz
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Root level files to ignore
+/PROJECT_SUMMARY.md
+/test_result.md
 
-# Testing
-/coverage
-
-# Next.js
-/.next/
-/out/
-next-env.d.ts
-*.tsbuildinfo
-
-# Production builds
-/build
-dist/
-dist
-
-# Environment files (comprehensive coverage)
-
-*token.json*
-*credentials.json*
-
-# Logs and debug files
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-dump.rdb
-
-# System files
-.DS_Store
-*.pem
-
-# Python
-__pycache__/
-*pyc*
-venv/
-.venv/
-
-# Development tools
-chainlit.md
-.chainlit
-.ipynb_checkpoints/
-.ac
-
-# Deployment
-.vercel
-
-# Data and databases
-agenthub/agents/youtube/db
-
-# Archive files and large assets
-**/*.zip
-**/*.tar.gz
-**/*.tar
-**/*.tgz
-*.pack
-*.deb
-*.dylib
-
-# Build caches
-.cache/
-
-# Mobile development
-android-sdk/ near_transfer_flutter/build/app/intermediates/incremental/debug-mergeJavaRes/zip-cache/HOpf3QahQAWhqLgrIzdq5acQEXs=
-near_transfer_flutter/build/app/intermediates/incremental/debug-mergeJavaRes/zip-cache/HOpf3QahQAWhqLgrIzdq5acQEXs=
-near_transfer_flutter/build/app/intermediates/incremental/debug-mergeJavaRes/zip-cache/MiXqKZbVRqoOP9unb0l0bWRyZOI=
-near_transfer_flutter/build/app/intermediates/incremental/debug-mergeJavaRes/zip-cache/X4HkLcffrFdXv2fGldOj5C4UKrQ=
-near_transfer_flutter/build/app/intermediates/merged_native_libs/debug/mergeDebugNativeLibs/out/lib/arm64-v8a/libflutter.so
-near_transfer_flutter/build/app/intermediates/merged_native_libs/debug/mergeDebugNativeLibs/out/lib/arm64-v8a/libVkLayer_khronos_validation.so
-near_transfer_flutter/build/app/intermediates/merged_native_libs/debug/mergeDebugNativeLibs/out/lib/armeabi-v7a/libflutter.so
-near_transfer_flutter/build/app/intermediates/merged_native_libs/debug/mergeDebugNativeLibs/out/lib/x86_64/libflutter.so
-near_transfer_flutter/build/app/outputs/apk/debug/app-debug.apk
-near_transfer_flutter/build/app/outputs/flutter-apk/app-debug.apk
-near_transfer_flutter/build/app/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib/arm64-v8a/libflutter.so
-near_transfer_flutter/build/app/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib/armeabi-v7a/libflutter.so
-near_transfer_flutter/build/app/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib/x86_64/libflutter.so
+# Include only the Flutter project
+# All Flutter-specific ignores are in near_transfer_flutter/.gitignore

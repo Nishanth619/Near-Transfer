@@ -30,7 +30,7 @@ class HelpButton extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -39,7 +39,7 @@ class HelpButton extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(
@@ -64,7 +64,7 @@ class HelpButton extends StatelessWidget {
         content: Text(
           helpText,
           style: GoogleFonts.poppins(
-            color: Colors.white.withOpacity(0.9),
+            color: Colors.white.withValues(alpha: 0.9),
             fontSize: 14,
             height: 1.5,
           ),
@@ -73,7 +73,7 @@ class HelpButton extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             style: TextButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.15),
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -96,7 +96,7 @@ class HelpButton extends StatelessWidget {
     return IconButton(
       icon: Icon(
         Icons.help_outline,
-        color: iconColor ?? Colors.white.withOpacity(0.8),
+        color: iconColor ?? Colors.white.withValues(alpha: 0.8),
       ),
       onPressed: () => _showHelpDialog(context),
       tooltip: 'Help',

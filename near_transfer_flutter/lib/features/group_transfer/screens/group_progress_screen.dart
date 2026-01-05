@@ -121,7 +121,7 @@ class _GroupProgressScreenState extends State<GroupProgressScreen> {
                             borderRadius: BorderRadius.circular(8),
                             child: LinearProgressIndicator(
                               value: overallProgress,
-                              backgroundColor: Colors.white.withOpacity(0.3),
+                              backgroundColor: Colors.white.withValues(alpha: 0.3),
                               valueColor: const AlwaysStoppedAnimation(Colors.white),
                               minHeight: 8,
                             ),
@@ -179,7 +179,7 @@ class _GroupProgressScreenState extends State<GroupProgressScreen> {
                       color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, -2),
                         ),
@@ -251,17 +251,14 @@ class _GroupProgressScreenState extends State<GroupProgressScreen> {
 
   void _pauseDevice(GroupSessionService service, String deviceId) {
     // TODO: Implement pause for specific device
-    print('Pausing device: $deviceId');
   }
 
   void _resumeDevice(GroupSessionService service, String deviceId) {
     // TODO: Implement resume for specific device
-    print('Resuming device: $deviceId');
   }
 
   void _retryDevice(GroupSessionService service, String deviceId) {
     // TODO: Implement retry for specific device
-    print('Retrying device: $deviceId');
   }
 
   Future<bool?> _showCancelDialog(BuildContext context) {

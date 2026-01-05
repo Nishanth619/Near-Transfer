@@ -35,7 +35,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading history: $e');
       setState(() {
         _isLoading = false;
       });
@@ -44,16 +43,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         title: const Text('History', style: TextStyle(color: Colors.white)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
         actions: [
           const HelpButton(
             featureName: 'Transfer History',
@@ -65,44 +62,36 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
         ],
       ),
-      body: AnimatedBackground(
-        child: Column(
-          children: [
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.only(top: kToolbarHeight + 20),
-                padding: const EdgeInsets.all(AppConstants.spacingLg),
-                decoration: const BoxDecoration(
-                  color: AppColors.surfaceAlt,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(30),
-                    topRight: Radius.circular(30),
-                  ),
-                ),
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _receivedFiles.isEmpty
-                        ? _buildEmptyState()
-                        : _buildFileList(),
-              ),
-            ),
-            // Banner Ad at bottom
-            Container(
-              color: AppColors.surfaceAlt,
-              child: const SafeArea(
-                top: false,
-                child: BannerAdWidget(),
-              ),
-            ),
-          ],
-        ),
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.surfaceAlt,
+      body: Column(
+        children: [
+          // Main content
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _receivedFiles.isEmpty
+                    ? _buildEmptyState()
+                    : _buildFileList(),
+          ),
+          // Banner Ad at bottom
+          const BannerAdWidget(),
+          // Space for bottom nav
+          const SizedBox(height: 80),
+        ],
       ),
     );
   }
 
   Widget _buildFileList() {
-    return ListView.builder(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return ListView.separated(
+      padding: EdgeInsets.zero,
       itemCount: _receivedFiles.length,
+      separatorBuilder: (context, index) => Divider(
+        height: 1,
+        color: isDark ? Colors.white12 : Colors.grey[300],
+      ),
       itemBuilder: (context, index) {
         final file = _receivedFiles[index];
         final fileName = file['fileName'] as String;
@@ -110,145 +99,120 @@ class _HistoryScreenState extends State<HistoryScreen> {
         final filePath = file['filePath'] as String;
         final receivedAt = file['receivedAt'] as int;
         
-        return FadeInUp(
-          delay: Duration(milliseconds: 50 * index),
-          child: Dismissible(
-            key: Key(file['id'].toString()),
-            direction: DismissDirection.endToStart,
-            background: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: Colors.red,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 20),
-              child: const Icon(Icons.delete, color: Colors.white, size: 32),
-            ),
-            confirmDismiss: (direction) => _confirmDelete(fileName),
-            onDismissed: (direction) => _deleteFile(file['id'] as int),
-            child: Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: InkWell(
-                onTap: () => _openFile(filePath),
-                borderRadius: BorderRadius.circular(16),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      // File icon based on type
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: _getFileColor(fileName).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
+        return Dismissible(
+          key: Key(file['id'].toString()),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            color: Colors.red,
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 20),
+            child: const Icon(Icons.delete, color: Colors.white, size: 28),
+          ),
+          confirmDismiss: (direction) => _confirmDelete(fileName),
+          onDismissed: (direction) => _deleteFile(file['id'] as int),
+          child: InkWell(
+            onTap: () => _openFile(filePath),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  // File icon
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: _getFileColor(fileName).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      _getFileIcon(fileName),
+                      color: _getFileColor(fileName),
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  
+                  // File details
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          fileName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 15,
+                            color: isDark ? Colors.white : AppColors.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        child: Icon(
-                          _getFileIcon(fileName),
-                          color: _getFileColor(fileName),
-                          size: 32,
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_formatFileSize(fileSize)} • ${_formatDate(receivedAt)}',
+                          style: TextStyle(
+                            color: isDark ? Colors.white54 : Colors.grey[600],
+                            fontSize: 13,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      
-                      // File details
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      ],
+                    ),
+                  ),
+                  
+                  // Menu button
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert, color: isDark ? Colors.white54 : Colors.grey[600], size: 20),
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'open':
+                          _openFile(filePath);
+                          break;
+                        case 'share':
+                          _shareFile(filePath);
+                          break;
+                        case 'delete':
+                          _confirmDelete(fileName).then((confirm) {
+                            if (confirm == true) {
+                              _deleteFile(file['id'] as int);
+                            }
+                          });
+                          break;
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'open',
+                        child: Row(
                           children: [
-                            Text(
-                              fileName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _formatFileSize(fileSize),
-                              style: const TextStyle(
-                                color: AppColors.muted,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _formatDate(receivedAt),
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 12,
-                              ),
-                            ),
+                            Icon(Icons.open_in_new, size: 18),
+                            SizedBox(width: 10),
+                            Text('Open'),
                           ],
                         ),
                       ),
-                      
-                      // Action buttons
-                      PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert, color: AppColors.muted),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      const PopupMenuItem(
+                        value: 'share',
+                        child: Row(
+                          children: [
+                            Icon(Icons.share, size: 18),
+                            SizedBox(width: 10),
+                            Text('Share'),
+                          ],
                         ),
-                        onSelected: (value) {
-                          switch (value) {
-                            case 'open':
-                              _openFile(filePath);
-                              break;
-                            case 'share':
-                              _shareFile(filePath);
-                              break;
-                            case 'delete':
-                              _confirmDelete(fileName).then((confirm) {
-                                if (confirm == true) {
-                                  _deleteFile(file['id'] as int);
-                                }
-                              });
-                              break;
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'open',
-                            child: Row(
-                              children: [
-                                Icon(Icons.open_in_new, size: 20),
-                                SizedBox(width: 12),
-                                Text('Open'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'share',
-                            child: Row(
-                              children: [
-                                Icon(Icons.share, size: 20),
-                                SizedBox(width: 12),
-                                Text('Share'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete, size: 20, color: Colors.red),
-                                SizedBox(width: 12),
-                                Text('Delete', style: TextStyle(color: Colors.red)),
-                              ],
-                            ),
-                          ),
-                        ],
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, size: 18, color: Colors.red),
+                            SizedBox(width: 10),
+                            Text('Delete', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
             ),
           ),
@@ -266,7 +230,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: Icon(
               Icons.history,
               size: 80,
-              color: AppColors.primary.withOpacity(0.2),
+              color: AppColors.primary.withValues(alpha: 0.2),
             ),
           ),
           const SizedBox(height: 24),

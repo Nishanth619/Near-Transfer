@@ -22,9 +22,10 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+    
     _progressController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 800), // Reduced from 1500ms
     );
 
     _progressAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -55,19 +56,18 @@ class _SplashScreenState extends State<SplashScreen>
       termsAccepted = prefs.getBool('terms_accepted') ?? false;
       onboardingComplete = prefs.getBool(_onboardingCompleteKey) ?? false;
     } catch (e) {
-      print('SharedPreferences error: $e');
       // On error, show terms screen
       termsAccepted = false;
     }
     
     // Small delay to ensure UI shows 100%
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 100));
     
     if (mounted) {
-      if (!termsAccepted) {
-        GoRouter.of(context).go('/terms');
-      } else if (!onboardingComplete) {
+      if (!onboardingComplete) {
         GoRouter.of(context).go('/onboarding');
+      } else if (!termsAccepted) {
+        GoRouter.of(context).go('/terms');
       } else {
         GoRouter.of(context).go('/home');
       }
@@ -104,28 +104,19 @@ class _SplashScreenState extends State<SplashScreen>
             children: [
               const Spacer(flex: 2),
               
-              // Logo with animation
+              // Logo with animation - matching native splash style
               FadeInDown(
                 duration: const Duration(milliseconds: 800),
-                child: Container(
-                  width: 160,
-                  height: 160,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 1.5,
-                    ),
-                  ),
+                child: SizedBox(
+                  width: 150,
+                  height: 150,
                   child: Image.asset(
-                    'assets/images/app_logo.png',
+                    'assets/app_icon.png',
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       return const Icon(
                         Icons.swap_horiz,
-                        size: 80,
+                        size: 100,
                         color: Colors.white,
                       );
                     },
@@ -166,9 +157,9 @@ class _SplashScreenState extends State<SplashScreen>
                 delay: const Duration(milliseconds: 500),
                 duration: const Duration(milliseconds: 800),
                 child: Text(
-                  'Share Faster, Connect Seamlessly',
+                  'Phone to PC • Cross-Platform Transfer',
                   style: GoogleFonts.poppins(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w400,
                     color: Colors.white70,
                     letterSpacing: 0.5,
@@ -224,7 +215,7 @@ class _SplashScreenState extends State<SplashScreen>
           height: 6,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(3),
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
           ),
           child: Align(
             alignment: Alignment.centerLeft,
@@ -242,7 +233,7 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF00B4D8).withOpacity(0.5),
+                      color: const Color(0xFF00B4D8).withValues(alpha: 0.5),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),

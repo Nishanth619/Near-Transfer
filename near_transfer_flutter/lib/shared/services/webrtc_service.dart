@@ -48,32 +48,24 @@ class WebRTCService {
 
   void _log(String message) {
     final timestamp = DateTime.now().toIso8601String();
-    print('[$timestamp] $message');
   }
 
   Future<void> initConnection({bool isOfferer = false}) async {
-    print('🌐 ========== INITIALIZING WEBRTC CONNECTION ==========');
-    print('🌐 Role: ${isOfferer ? "OFFERER (Sender)" : "ANSWERER (Receiver)"}');
     
     _peerConnection = await webrtc.createPeerConnection(_configuration);
-    print('✅ PeerConnection created');
 
     _peerConnection!.onIceCandidate = (candidate) {
-      print('🧊 ICE Candidate generated: ${candidate.candidate?.substring(0, 50)}...');
       onIceCandidate?.call(candidate);
     };
 
     _peerConnection!.onConnectionState = (state) {
-      print('🔗 WebRTC Connection State: $state');
       onConnectionStateChange?.call(state.toString());
     };
 
     _peerConnection!.onIceConnectionState = (state) {
-      print('🧊 ICE Connection State: $state');
     };
 
     if (isOfferer) {
-      print('📤 Creating data channel as offerer...');
       // Create data channel
       final dataChannelInit = webrtc.RTCDataChannelInit()
         ..ordered = true
@@ -83,20 +75,16 @@ class WebRTCService {
         'fileTransfer',
         dataChannelInit,
       );
-      print('✅ Data channel created: ${_dataChannel!.label}');
       _setupDataChannel(_dataChannel!);
       
       // Start timeout timer
       _dataChannelOpenTimer = Timer(NetworkConfig.webrtcTimeout, () {
         if (!isDataChannelOpen) {
-          print('⏱️ DataChannel open timeout!');
         }
       });
     } else {
-      print('📥 Waiting for data channel as answerer...');
       // Wait for data channel
       _peerConnection!.onDataChannel = (channel) {
-        print('✅ Data channel received: ${channel.label}');
         _dataChannel = channel;
         _setupDataChannel(channel);
       };
@@ -104,20 +92,16 @@ class WebRTCService {
   }
 
   void _setupDataChannel(webrtc.RTCDataChannel channel) {
-    print('⚙️ Setting up data channel listeners...');
     
     channel.onMessage = (message) {
       _handleDataChannelMessage(message);
     };
 
     channel.onDataChannelState = (state) {
-      print('📡 Data channel state changed: $state');
       if (state == webrtc.RTCDataChannelState.RTCDataChannelOpen) {
-        print('✅ ========== DATA CHANNEL OPEN! ==========');
         _dataChannelOpenTimer?.cancel();
         onDataChannelOpen?.call();
       } else if (state == webrtc.RTCDataChannelState.RTCDataChannelClosed) {
-        print('🔌 Data channel closed');
         onDataChannelClosed?.call();
       }
     };
@@ -156,7 +140,6 @@ class WebRTCService {
         } else if (type == 'end') {
           // Transfer complete
           _log('Receive EOF for file: $_receivedFileName');
-          print('Transfer complete, assembling file...');
           // Capture data for assembly and clear state immediately to prepare for next file
           final chunks = List<Uint8List>.from(_receivedChunks);
           final fileName = _receivedFileName!;
@@ -170,7 +153,6 @@ class WebRTCService {
           _assembleReceivedFile(chunks, fileName);
         } else if (type == 'batch_complete') {
           // All files transferred
-          print('Batch transfer complete');
           onBatchComplete?.call();
         } else if (type == 'ack') {
           // ACK received (optional)
@@ -185,7 +167,6 @@ class WebRTCService {
           }
         }
       } catch (e) {
-        print('Error parsing data channel message: $e');
       }
     }
   }
@@ -205,7 +186,6 @@ class WebRTCService {
         offset += chunk.length;
       }
       
-      print('File assembled: ${fileData.length} bytes');
       
       // Save file to app documents directory
       final directory = await getApplicationDocumentsDirectory();
@@ -230,46 +210,31 @@ class WebRTCService {
         _log('Send ACK for file: $fileName');
       }
     } catch (e) {
-      print('Error saving file: $e');
     }
   }
 
   Future<webrtc.RTCSessionDescription> createOffer() async {
-    print('📝 Creating WebRTC offer...');
     final offer = await _peerConnection!.createOffer();
     await _peerConnection!.setLocalDescription(offer);
-    print('✅ Offer created and set as local description');
-    print('📄 SDP type: ${offer.type}, length: ${offer.sdp?.length} chars');
     return offer;
   }
 
   Future<webrtc.RTCSessionDescription> createAnswer(webrtc.RTCSessionDescription offer) async {
-    print('📝 Creating WebRTC answer...');
-    print('📄 Received offer SDP length: ${offer.sdp?.length} chars');
     await _peerConnection!.setRemoteDescription(offer);
-    print('✅ Remote description (offer) set');
     
     final answer = await _peerConnection!.createAnswer();
     await _peerConnection!.setLocalDescription(answer);
-    print('✅ Answer created and set as local description');
-    print('📄 Answer SDP length: ${answer.sdp?.length} chars');
     return answer;
   }
 
   Future<void> setRemoteDescription(webrtc.RTCSessionDescription description) async {
-    print('📝 Setting remote description (${description.type})...');
-    print('📄 SDP length: ${description.sdp?.length} chars');
     await _peerConnection!.setRemoteDescription(description);
-    print('✅ Remote description set successfully');
   }
 
   Future<void> addCandidate(webrtc.RTCIceCandidate candidate) async {
-    print('🧊 Adding ICE candidate: ${candidate.candidate?.substring(0, 50)}...');
     try {
       await _peerConnection!.addCandidate(candidate);
-      print('✅ ICE candidate added successfully');
     } catch (e) {
-      print('❌ Error adding ICE candidate: $e');
     }
   }
 
@@ -278,9 +243,7 @@ class WebRTCService {
       throw Exception('Data channel not open');
     }
 
-    print('Sending file: $fileName ($fileSize bytes)');
     if (startChunkIndex > 0) {
-      print('🔄 Resuming from chunk $startChunkIndex');
     }
     
     // Send metadata
@@ -302,19 +265,15 @@ class WebRTCService {
     for (int i = startByteIndex; i < fileSize; i += NetworkConfig.chunkSize) {
       // Check if paused - this happens BEFORE sending each chunk
       if (_isPaused) {
-        print('⏸️⏸️⏸️ TRANSFER PAUSED at chunk $_currentChunkSeq/$totalChunks');
-        print('   Waiting for resume...');
         
         int pauseCounter = 0;
         while (_isPaused) {
           await Future.delayed(const Duration(milliseconds: 500));
           pauseCounter++;
           if (pauseCounter % 2 == 0) {  // Log every second
-            print('   ⏸️ Still paused... (${pauseCounter ~/2}s)');
           }
         }
         
-        print('▶️ Transfer RESUMED from chunk $_currentChunkSeq/$totalChunks');
       }
       
       // Flow control: wait if buffer is full
@@ -346,7 +305,6 @@ class WebRTCService {
     _dataChannel!.send(webrtc.RTCDataChannelMessage(jsonEncode(endMsg)));
     _log('Send EOF for file: $fileName');
     
-    print('File sent successfully, waiting for ACK...');
     
     // Wait for ACK
     _fileAckCompleter = Completer<void>();
@@ -354,13 +312,10 @@ class WebRTCService {
       await _fileAckCompleter!.future.timeout(
         const Duration(seconds: 30),
         onTimeout: () {
-          print('⚠️ Timeout waiting for file ACK');
           // Don't throw, just proceed (might be legacy receiver)
         },
       );
-      print('✅ File transfer acknowledged by receiver');
     } catch (e) {
-      print('Error waiting for ACK: $e');
     }
     _log('sendFile() returned (sender)');
   }
@@ -372,19 +327,14 @@ class WebRTCService {
       'type': 'batch_complete',
     };
     _dataChannel!.send(webrtc.RTCDataChannelMessage(jsonEncode(msg)));
-    print('Sent batch complete signal');
   }
 
   void pauseSending() {
-    print('🔴 PAUSE SENDING CALLED - Setting _isPaused = true');
     _isPaused = true;
-    print('🔴 _isPaused is now: $_isPaused');
   }
 
   void resumeSending() {
-    print('🟢 RESUME SENDING CALLED - Setting _isPaused = false');
     _isPaused = false;
-    print('🟢 _isPaused is now: $_isPaused');
   }
 
   void close() {
@@ -394,6 +344,5 @@ class WebRTCService {
     _dataChannel = null;
     _peerConnection = null;
     _receivedChunks.clear();
-    print('WebRTC connection closed');
   }
 }

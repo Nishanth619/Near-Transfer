@@ -77,23 +77,6 @@ class _PremiumScreenState extends State<PremiumScreen> {
     }
   }
 
-  void _toggleDebugPremium() {
-    _subscriptionService.toggleDebugPremium();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _subscriptionService.isPremium 
-              ? '🎉 Debug Premium ENABLED - Ads are now hidden!'
-              : '📢 Debug Premium DISABLED - Ads will show again.',
-          ),
-          backgroundColor: _subscriptionService.isPremium ? Colors.green : Colors.orange,
-        ),
-      );
-      setState(() {});
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -137,7 +120,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: (isPremium ? Colors.green : Colors.amber).withOpacity(0.4),
+                          color: (isPremium ? Colors.green : Colors.amber).withValues(alpha: 0.4),
                           blurRadius: 30,
                           spreadRadius: 5,
                         ),
@@ -178,7 +161,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
                       : 'One-time purchase • Lifetime access',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -193,12 +176,12 @@ class _PremiumScreenState extends State<PremiumScreen> {
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: isDark 
-                        ? Colors.white.withOpacity(0.1) 
-                        : Colors.white.withOpacity(0.95),
+                        ? Colors.white.withValues(alpha: 0.1) 
+                        : Colors.white.withValues(alpha: 0.95),
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -260,7 +243,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           elevation: 8,
-                          shadowColor: Colors.amber.withOpacity(0.4),
+                          shadowColor: Colors.amber.withValues(alpha: 0.4),
                         ),
                         child: _isLoading
                           ? const SizedBox(
@@ -315,10 +298,10 @@ class _PremiumScreenState extends State<PremiumScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.2),
+                        color: Colors.green.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: Colors.green.withOpacity(0.5),
+                          color: Colors.green.withValues(alpha: 0.5),
                           width: 2,
                         ),
                       ),
@@ -345,7 +328,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
                                 Text(
                                   'All ads have been removed',
                                   style: TextStyle(
-                                    color: Colors.white.withOpacity(0.8),
+                                    color: Colors.white.withValues(alpha: 0.8),
                                     fontSize: 14,
                                   ),
                                 ),
@@ -356,31 +339,6 @@ class _PremiumScreenState extends State<PremiumScreen> {
                       ),
                     ),
                   ),
-                
-                const SizedBox(height: 32),
-                
-                // Debug Toggle (for testing)
-                FadeIn(
-                  delay: const Duration(milliseconds: 400),
-                  child: GestureDetector(
-                    onLongPress: _toggleDebugPremium,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'Long press here to toggle debug premium mode',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.5),
-                          fontSize: 12,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                ),
                 
                 const SizedBox(height: 40),
               ],
@@ -404,7 +362,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
+            color: color.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: color, size: 24),

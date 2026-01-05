@@ -112,7 +112,7 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Icon(
@@ -189,15 +189,9 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
                                 '• WiFi/Network Access: To discover devices and transfer files\n\n'
                                 'OPTIONAL PERMISSIONS:\n'
                                 '• Camera: For QR code scanning to connect devices\n'
-                                '• Contacts: For contact sharing and Phone Clone feature\n'
-                                '• Call Logs: For Phone Clone feature to backup/restore call history\n'
-                                '• SMS Messages: For Phone Clone feature to backup/restore text messages\n'
-                                '• Phone State: For Phone Clone feature to access call log metadata\n'
-                                '• Photos & Videos: For media sharing and Phone Clone backup\n\n'
-                                'IMPORTANT: SMS and Call Log data is processed entirely on your device and '
-                                'transmitted directly to the receiving device over your local WiFi network. '
-                                'This data is never uploaded to external servers.\n\n'
-                                'You may deny optional permissions, but some features (like Phone Clone) may not work.',
+                                '• Contacts: For contact sharing feature\n'
+                                '• Photos & Videos: For media sharing\n\n'
+                                'You may deny optional permissions, but some features may not work.',
                               ),
                               _buildSection(
                                 '5. Disclaimer of Warranties',
@@ -230,7 +224,7 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
                               const SizedBox(height: 20),
                               Center(
                                 child: Text(
-                                  'Last Updated: December 2024',
+                                  'Last Updated: January 2026',
                                   style: GoogleFonts.poppins(
                                     fontSize: 12,
                                     color: Colors.grey,

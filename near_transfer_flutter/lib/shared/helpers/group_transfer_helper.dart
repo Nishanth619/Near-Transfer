@@ -1,9 +1,11 @@
 import 'package:file_picker/file_picker.dart';
 import '../models/discovered_device.dart';
+import '../models/group_session.dart';
 import '../providers/transfer_orchestrator.dart';
 import '../services/group_session_service.dart';
 import '../services/webrtc_service.dart';
 import '../services/signaling_socket_service.dart';
+import '../services/discovery_service.dart';
 
 /// Group transfer helper to coordinate multiple device transfers
 class GroupTransferHelper {
@@ -20,7 +22,6 @@ class GroupTransferHelper {
     if (devices.isEmpty) throw ArgumentError('No devices provided');
     if (files.isEmpty) throw ArgumentError('No files provided');
 
-    print('🎯 Starting group transfer to ${devices.length} devices');
 
     // Create group session
     await groupService.createGroup();
@@ -39,17 +40,17 @@ class GroupTransferHelper {
           webrtcService: WebRTCService(),
         );
 
-        // Setup progress callback
-        orchestrator.onProgress = () {
+        // Setup progress listener using addListener
+        orchestrator.addListener(() {
           groupService.updateDeviceProgress(
-            device.id,
+            device.deviceId,
             orchestrator.progress,
           );
-        };
+        });
 
         // Setup error callback
         orchestrator.onError = (error) {
-          groupService.markDeviceAsFailed(device.id, error);
+          groupService.markDeviceAsFailed(device.deviceId, error);
         };
 
         // Connect and send
@@ -58,17 +59,15 @@ class GroupTransferHelper {
         orchestrators.add(orchestrator);
         
         groupService.updateDeviceState(
-          device.id,
+          device.deviceId,
           connectionState: ConnectionState.connected,
         );
         
       } catch (e) {
-        print('❌ Failed to send to ${device.name}: $e');
-        groupService.markDeviceAsFailed(device.id, e.toString());
+        groupService.markDeviceAsFailed(device.deviceId, e.toString());
       }
     }
 
-    print('✅ Group transfer initiated');
   }
 
   /// Cleanup all orchestrators

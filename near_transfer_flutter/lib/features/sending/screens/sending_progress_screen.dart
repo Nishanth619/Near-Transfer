@@ -42,98 +42,124 @@ class _SendingProgressScreenState extends State<SendingProgressScreen> {
   Widget build(BuildContext context) {
     final state = widget.orchestrator.state;
     final progress = widget.orchestrator.progress;
+    
+    // Desktop responsive sizing
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 900;
+    final maxContentWidth = isDesktop ? 800.0 : double.infinity;
+    final horizontalPadding = isDesktop ? 40.0 : 24.0;
+    final progressSize = isDesktop ? 180.0 : 140.0;
+    final titleFontSize = isDesktop ? 26.0 : 22.0;
+    final statusIconSize = isDesktop ? 80.0 : 60.0;
+    final statusIconIconSize = isDesktop ? 44.0 : 32.0;
 
     return PopScope(
       canPop: state == TransferState.completed || state == TransferState.failed || state == TransferState.paused,
       child: Scaffold(
         body: AnimatedBackground(
           child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                children: [
-                  const SizedBox(height: 24),
-                  
-                  // Compact status icon
-                  _buildCompactStatusIcon(state),
-                  
-                  const SizedBox(height: 12),
-                  
-                  // Status text
-                  Text(
-                    _getStatusText(state),
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 6),
-                  
-                  // File counter
-                  if (widget.orchestrator.totalFiles > 0)
-                    Text(
-                      'File ${widget.orchestrator.currentFileIndex + 1} of ${widget.orchestrator.totalFiles}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Circular progress indicator
-                  if (state == TransferState.transferring || state == TransferState.paused)
-                    Column(
-                      children: [
-                        AnimatedCircularProgress(
-                          progress: progress,
-                          size: 140,
-                          progressColor: state == TransferState.paused 
-                              ? Colors.orange 
-                              : Colors.green,
-                          speedText: state == TransferState.transferring 
-                              ? widget.orchestrator.speedString 
-                              : 'Paused',
-                          etaText: state == TransferState.transferring 
-                              ? 'ETA: ${widget.orchestrator.etaString}' 
-                              : null,
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                    ),
-                  
-                  // Paused indicator
-                  if (state == TransferState.paused)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxContentWidth),
+                child: Padding(
+                  padding: EdgeInsets.all(horizontalPadding),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 24),
+                      
+                      // Compact status icon
+                      Container(
+                        width: statusIconSize,
+                        height: statusIconSize,
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange, width: 2),
+                          color: _getStatusColor(state).withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
                         ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
+                        child: Icon(
+                          _getStatusIcon(state),
+                          size: statusIconIconSize,
+                          color: Colors.white,
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 12),
+                      
+                      // Status text
+                      Text(
+                        _getStatusText(state),
+                        style: TextStyle(
+                          fontSize: titleFontSize,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 6),
+                      
+                      // File counter
+                      if (widget.orchestrator.totalFiles > 0)
+                        Text(
+                          'File ${widget.orchestrator.currentFileIndex + 1} of ${widget.orchestrator.totalFiles}',
+                          style: TextStyle(
+                            fontSize: isDesktop ? 15.0 : 13.0,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Circular progress indicator
+                      if (state == TransferState.transferring || state == TransferState.paused)
+                        Column(
                           children: [
-                            Icon(Icons.pause_circle, color: Colors.orange, size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              'Transfer Paused',
-                              style: TextStyle(
-                                color: Colors.orange,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
+                            AnimatedCircularProgress(
+                              progress: progress,
+                              size: progressSize,
+                              progressColor: state == TransferState.paused 
+                                  ? Colors.orange 
+                                  : Colors.green,
+                              speedText: state == TransferState.transferring 
+                                  ? widget.orchestrator.speedString 
+                                  : 'Paused',
+                              etaText: state == TransferState.transferring 
+                                  ? 'ETA: ${widget.orchestrator.etaString}' 
+                                  : null,
+                              isPaused: state == TransferState.paused,
                             ),
+                            const SizedBox(height: 16),
                           ],
                         ),
-                      ),
-                    ),
-                  
-                  const SizedBox(height: 16),
+                      
+                      // Paused indicator
+                      if (state == TransferState.paused)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange, width: 2),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.pause_circle, color: Colors.orange, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Transfer Paused',
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      
+                      const SizedBox(height: 16),
                   
                   // File list
                   if (widget.orchestrator.totalFiles > 0)
@@ -141,10 +167,10 @@ class _SendingProgressScreenState extends State<SendingProgressScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Colors.white.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             width: 1,
                           ),
                         ),
@@ -224,11 +250,13 @@ class _SendingProgressScreenState extends State<SendingProgressScreen> {
                         ),
                       ),
                     ),
-                ],
-              ),
-            ),
-          ),
-        ),
+                    ],  // Column children
+                  ),  // Column
+                ),  // Padding child
+              ),  // ConstrainedBox child
+            ),  // Center child
+          ),  // SafeArea child
+        ),  // AnimatedBackground child
         floatingActionButton: (state == TransferState.transferring || state == TransferState.paused)
             ? FloatingActionButton(
                 onPressed: () async {
@@ -284,7 +312,7 @@ class _SendingProgressScreenState extends State<SendingProgressScreen> {
       width: 60,
       height: 60,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         shape: BoxShape.circle,
       ),
       child: Icon(
@@ -319,11 +347,11 @@ class _SendingProgressScreenState extends State<SendingProgressScreen> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: status == 'transferring' || status == 'paused'
-            ? Colors.white.withOpacity(0.15) 
-            : Colors.white.withOpacity(0.05),
+            ? Colors.white.withValues(alpha: 0.15) 
+            : Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
         border: status == 'paused' 
-            ? Border.all(color: Colors.orange.withOpacity(0.5), width: 1)
+            ? Border.all(color: Colors.orange.withValues(alpha: 0.5), width: 1)
             : null,
       ),
       child: Row(
@@ -351,7 +379,7 @@ class _SendingProgressScreenState extends State<SendingProgressScreen> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.2),
+                color: Colors.green.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.check_circle, size: 20, color: Colors.green),
@@ -361,7 +389,7 @@ class _SendingProgressScreenState extends State<SendingProgressScreen> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.2),
+                color: Colors.orange.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.pause_circle, size: 20, color: Colors.orange),
@@ -392,7 +420,7 @@ class _SendingProgressScreenState extends State<SendingProgressScreen> {
                   _formatBytes(file.size),
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.6),
+                    color: Colors.white.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -404,7 +432,7 @@ class _SendingProgressScreenState extends State<SendingProgressScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.2),
+                color: Colors.orange.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: const Text(
@@ -451,6 +479,26 @@ class _SendingProgressScreenState extends State<SendingProgressScreen> {
         return 'Transfer Failed';
       default:
         return 'Preparing...';
+    }
+  }
+  
+  Color _getStatusColor(TransferState state) {
+    if (state == TransferState.completed) {
+      return Colors.green;
+    } else if (state == TransferState.failed) {
+      return Colors.red;
+    } else {
+      return AppColors.primary;
+    }
+  }
+  
+  IconData _getStatusIcon(TransferState state) {
+    if (state == TransferState.completed) {
+      return Icons.check_circle;
+    } else if (state == TransferState.failed) {
+      return Icons.error;
+    } else {
+      return Icons.upload;
     }
   }
 }

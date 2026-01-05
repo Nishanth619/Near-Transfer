@@ -41,9 +41,7 @@ class ResumableWebRTCService extends WebRTCService {
     _startChunkIndex = startChunkIndex ?? 0;
     _isResuming = resumeTransferId != null;
     
-    print('📤 Sending file: $fileName (Transfer ID: $_currentTransferId)');
     if (_isResuming) {
-      print('🔄 Resuming from chunk $_startChunkIndex');
     }
     
     final totalChunks = (fileSize / NetworkConfig.chunkSize).ceil();
@@ -87,7 +85,6 @@ class ResumableWebRTCService extends WebRTCService {
       );
       
       await _db.insertTransferState(state);
-      print('💾 Created transfer state: $_currentTransferId');
     } else {
       // Resuming - update state
       await _db.updateTransferState(
@@ -96,7 +93,6 @@ class ResumableWebRTCService extends WebRTCService {
           lastUpdated: DateTime.now(),
         ),
       );
-      print('💾 Updated transfer state for resume');
     }
     
     // Use base class sendFile with custom progress callback
@@ -117,15 +113,12 @@ class ResumableWebRTCService extends WebRTCService {
       
       // Mark as completed
       await _db.completeTransfer(_currentTransferId!);
-      print('✅ Transfer completed: $_currentTransferId');
     } catch (e) {
       // Mark as failed or paused
       if (e.toString().contains('disconnect') || e.toString().contains('closed')) {
         await _db.pauseTransfer(_currentTransferId!);
-        print('⏸️ Transfer paused due to disconnection: $_currentTransferId');
       } else {
         await _db.failTransfer(_currentTransferId!);
-        print('❌ Transfer failed: $_currentTransferId');
       }
       rethrow;
     } finally {
@@ -165,7 +158,6 @@ class ResumableWebRTCService extends WebRTCService {
     _partnerDeviceName = partnerDeviceName;
     _partnerIp = partnerIp;
     
-    print('📥 Receiving file: $fileName (Transfer ID: $_currentTransferId)');
     
     final totalChunks = (fileSize / NetworkConfig.chunkSize).ceil();
     final chunkSize = NetworkConfig.chunkSize;
@@ -192,7 +184,6 @@ class ResumableWebRTCService extends WebRTCService {
     );
     
     await _db.insertTransferState(state);
-    print('💾 Created receive state: $_currentTransferId');
   }
   
   /// Attempt to resume a paused transfer
@@ -200,24 +191,18 @@ class ResumableWebRTCService extends WebRTCService {
     final state = await _db.getTransferState(transferId);
     
     if (state == null) {
-      print('❌ Transfer state not found: $transferId');
       return false;
     }
     
     if (!state.canResume) {
-      print('❌ Transfer cannot be resumed (status: ${state.status})');
       return false;
     }
     
     // Check if transfer is not too old
     if (!TransferResumeUtils.canResumeAfterTime(state.lastUpdated)) {
-      print('❌ Transfer too old to resume');
       return false;
     }
     
-    print('🔄 Resuming transfer: $transferId');
-    print('   From chunk: ${state.lastChunkSeq}/${state.totalChunks}');
-    print('   Progress: ${(state.progress * 100).toStringAsFixed(1)}%');
     
     // Store resume state
     _currentTransferId = transferId;
@@ -240,7 +225,6 @@ class ResumableWebRTCService extends WebRTCService {
       );
       return digest;
     } catch (e) {
-      print('⚠️ Could not calculate data hash: $e');
       return null;
     }
   }
@@ -256,7 +240,6 @@ class ResumableWebRTCService extends WebRTCService {
     if (_currentTransferId != null) {
       await _db.pauseTransfer(_currentTransferId!);
       pauseSending(); // Pause WebRTC sending
-      print('⏸️ Paused transfer: $_currentTransferId');
     }
   }
   
@@ -264,7 +247,6 @@ class ResumableWebRTCService extends WebRTCService {
   Future<void> resumeCurrentTransfer() async {
     if (_currentTransferId != null) {
       resumeSending(); // Resume WebRTC sending
-      print('▶️ Resumed transfer: $_currentTransferId');
     }
   }
   

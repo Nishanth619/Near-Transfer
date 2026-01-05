@@ -40,9 +40,7 @@ class HttpFallbackService {
       final fileSize = await file.length();
       final fileHash = await TransferResumeUtils.calculateFileHashChunked(filePath);
       
-      print('📤 HTTP Upload: $fileName ($fileSize bytes)');
       if (resumeTransferId != null) {
-        print('🔄 Resuming upload: $resumeTransferId');
       }
       
       // Check for existing transfer state
@@ -53,7 +51,6 @@ class HttpFallbackService {
         existingState = await _db.getTransferState(resumeTransferId);
         if (existingState != null) {
           startByteIndex = existingState.bytesTransferred;
-          print('🔄 Resuming from byte: $startByteIndex');
         }
       }
       
@@ -137,18 +134,15 @@ class HttpFallbackService {
         // Success
         final responseBody = await response.stream.bytesToString();
         await _db.completeTransfer(_currentTransferId!);
-        print('✅ HTTP Upload completed: $_currentTransferId');
         return responseBody; // Download URL or success message
       } else if (response.statusCode == 308) {
         // Resume response - partial upload accepted
-        print('⏸️ Partial upload saved, can resume later');
         await _db.pauseTransfer(_currentTransferId!);
         return null;
       } else {
         throw Exception('Upload failed: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ HTTP Upload error: $e');
       if (e.toString().contains('SocketException') || e.toString().contains('timeout')) {
         await _db.pauseTransfer(_currentTransferId!);
       } else {
@@ -175,7 +169,6 @@ class HttpFallbackService {
     _client = http.Client();
     
     try {
-      print('📥 HTTP Download: $fileName ($fileSize bytes)');
       
       // Get download directory
       final directory = await getApplicationDocumentsDirectory();
@@ -187,10 +180,8 @@ class HttpFallbackService {
       if (await file.exists()) {
         startByteIndex = await file.length();
         if (startByteIndex >= fileSize) {
-          print('✅ File already complete');
           return filePath;
         }
-        print('🔄 Resuming from byte: $startByteIndex');
       }
       
       // Create transfer state
@@ -253,12 +244,10 @@ class HttpFallbackService {
       await sink.close();
       
       await _db.completeTransfer(_currentTransferId!);
-      print('✅ HTTP Download completed: $filePath');
       onFileReceived?.call(filePath);
       return filePath;
       
     } catch (e) {
-      print('❌ HTTP Download error: $e');
       if (e.toString().contains('SocketException') || e.toString().contains('timeout')) {
         await _db.pauseTransfer(_currentTransferId!);
       } else {

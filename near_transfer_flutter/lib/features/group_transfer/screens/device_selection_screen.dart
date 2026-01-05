@@ -155,7 +155,7 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     offset: const Offset(0, -2),
                   ),
@@ -200,7 +200,7 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       elevation: isSelected ? 4 : 1,
       color: isSelected
-          ? (isDark ? const Color(0xFF2C2C2C) : AppColors.primary.withOpacity(0.1))
+          ? (isDark ? const Color(0xFF2C2C2C) : AppColors.primary.withValues(alpha: 0.1))
           : null,
       child: CheckboxListTile(
         value: isSelected,

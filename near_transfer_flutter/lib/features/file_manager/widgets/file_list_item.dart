@@ -17,15 +17,18 @@ class FileListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return ListTile(
       leading: _buildLeading(),
       title: Text(
         file.name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w500,
+          color: isDark ? Colors.white : Colors.black87,
         ),
       ),
       subtitle: file.isDirectory
@@ -34,14 +37,14 @@ class FileListItem extends StatelessWidget {
               file.formattedSize,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey[600],
+                color: isDark ? Colors.white60 : Colors.grey[600],
               ),
             ),
       trailing: file.isDirectory
-          ? const Icon(Icons.chevron_right, color: Colors.grey)
+          ? Icon(Icons.chevron_right, color: isDark ? Colors.white54 : Colors.grey)
           : null,
       selected: isSelected,
-      selectedTileColor: Theme.of(context).primaryColor.withOpacity(0.1),
+      selectedTileColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
       onTap: onTap,
       onLongPress: onLongPress,
     );
@@ -56,7 +59,7 @@ class FileListItem extends StatelessWidget {
     }
 
     return CircleAvatar(
-      backgroundColor: _getIconColor().withOpacity(0.1),
+      backgroundColor: _getIconColor().withValues(alpha: 0.1),
       child: Icon(
         _getIcon(),
         color: _getIconColor(),

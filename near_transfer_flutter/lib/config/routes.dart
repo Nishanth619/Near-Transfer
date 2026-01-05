@@ -18,12 +18,9 @@ import '../features/group_transfer/screens/group_progress_screen.dart';
 import '../features/group_transfer/screens/device_selection_screen.dart';
 import '../features/speed_test/screens/speed_test_screen.dart';
 import '../features/radar/screens/radar_screen.dart';
-import '../features/phone_clone/screens/phone_clone_screen.dart';
-import '../features/phone_clone/screens/clone_progress_screen.dart';
 import '../features/premium/screens/premium_screen.dart';
 import '../shared/models/discovered_device.dart';
 import '../shared/providers/transfer_orchestrator.dart';
-import '../shared/services/phone_data_service.dart';
 
 final router = GoRouter(
   initialLocation: '/',
@@ -42,7 +39,7 @@ final router = GoRouter(
     GoRoute(
       path: '/onboarding',
       builder: (context, state) => OnboardingScreen(
-        onComplete: () => GoRouter.of(context).go('/home'),
+        onComplete: () => GoRouter.of(context).go('/terms'),
       ),
     ),
     // Main home screen
@@ -169,22 +166,6 @@ final router = GoRouter(
       path: '/radar',
       name: 'radar',
       builder: (context, state) => const RadarScreen(),
-    ),
-    GoRoute(
-      path: '/phone-clone',
-      name: 'phone-clone',
-      builder: (context, state) => const PhoneCloneScreen(),
-    ),
-    GoRoute(
-      path: '/clone-progress',
-      name: 'clone-progress',
-      builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>;
-        return CloneProgressScreen(
-          categories: (extra['categories'] as List).cast<CloneCategory>(),
-          stats: (extra['stats'] as List).cast<CategoryStats>(),
-        );
-      },
     ),
   ],
 );

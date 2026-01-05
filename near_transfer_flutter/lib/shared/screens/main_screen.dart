@@ -28,6 +28,7 @@ class _MainScreenState extends State<MainScreen> {
       body: _screens[_currentIndex],
       extendBody: true,
       bottomNavigationBar: Container(
+        height: 70,
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(25),
@@ -41,7 +42,7 @@ class _MainScreenState extends State<MainScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF6C63FF).withOpacity(0.3),
+              color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -49,45 +50,75 @@ class _MainScreenState extends State<MainScreen> {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(25),
-          child: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            selectedItemColor: Colors.white,
-            unselectedItemColor: Colors.white.withOpacity(0.5),
-            selectedFontSize: 12,
-            unselectedFontSize: 11,
-            type: BottomNavigationBarType.fixed,
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            selectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.bold,
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              splashColor: Colors.transparent,
+              highlightColor: Colors.transparent,
             ),
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_rounded, size: 24),
-                activeIcon: Icon(Icons.home_rounded, size: 26),
-                label: 'Home',
+            child: BottomNavigationBar(
+              currentIndex: _currentIndex,
+              onTap: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              selectedItemColor: Colors.white,
+              unselectedItemColor: Colors.white.withValues(alpha: 0.5),
+              selectedFontSize: 12,
+              unselectedFontSize: 11,
+              type: BottomNavigationBarType.fixed,
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              selectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.apps_rounded, size: 24),
-                activeIcon: Icon(Icons.apps_rounded, size: 26),
-                label: 'More',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.history_rounded, size: 24),
-                activeIcon: Icon(Icons.history_rounded, size: 26),
-                label: 'History',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.settings_rounded, size: 24),
-                activeIcon: Icon(Icons.settings_rounded, size: 26),
-                label: 'Settings',
-              ),
-            ],
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Icon(Icons.home_rounded, size: 24),
+                  ),
+                  activeIcon: Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Icon(Icons.home_rounded, size: 26),
+                  ),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Icon(Icons.apps_rounded, size: 24),
+                  ),
+                  activeIcon: Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Icon(Icons.apps_rounded, size: 26),
+                  ),
+                  label: 'More',
+                ),
+                BottomNavigationBarItem(
+                  icon: Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Icon(Icons.history_rounded, size: 24),
+                  ),
+                  activeIcon: Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Icon(Icons.history_rounded, size: 26),
+                  ),
+                  label: 'History',
+                ),
+                BottomNavigationBarItem(
+                  icon: Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Icon(Icons.settings_rounded, size: 24),
+                  ),
+                  activeIcon: Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Icon(Icons.settings_rounded, size: 26),
+                  ),
+                  label: 'Settings',
+                ),
+              ],
+            ),
           ),
         ),
       ),

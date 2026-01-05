@@ -1,7 +1,12 @@
+import 'dart:io' show Platform;
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// Check if running on mobile (Android/iOS)
+bool get _isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -23,6 +28,11 @@ class NotificationService {
   static const MethodChannel _vibrationChannel = MethodChannel('near_transfer/vibration');
 
   Future<void> init() async {
+    // Skip initialization on desktop - flutter_local_notifications only works on mobile
+    if (!_isMobile) {
+      return;
+    }
+
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -65,6 +75,9 @@ class NotificationService {
     required String title,
     required String body,
   }) async {
+    // Skip on desktop
+    if (!_isMobile) return;
+
     // Check if notifications are enabled
     if (!await _isNotificationsEnabled()) {
       return;

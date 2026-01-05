@@ -1,7 +1,12 @@
 import 'dart:async';
-import 'dart:math';
+import 'dart:io' show Platform;
+import 'dart:math' show sqrt;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:flutter/services.dart';
+
+/// Check if running on mobile (Android/iOS)
+bool get _isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
 /// Service to detect phone shake gestures
 class ShakeDetectorService {
@@ -23,6 +28,9 @@ class ShakeDetectorService {
 
   /// Start listening for shake gestures
   void startListening() {
+    // Accelerometer only works on mobile
+    if (!_isMobile) return;
+    
     if (_isListening) return;
     
     _isListening = true;

@@ -37,7 +37,6 @@ class ThemeProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Error loading theme preference: $e');
     }
   }
   
@@ -65,9 +64,7 @@ class ThemeProvider extends ChangeNotifier {
       }
       
       await prefs.setString(_themeKey, themeString);
-      print('✅ Theme saved: $themeString');
     } catch (e) {
-      print('Error saving theme preference: $e');
     }
   }
   

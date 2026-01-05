@@ -46,7 +46,6 @@ class GroupHttpCoordinator {
     _server = await HttpServer.bind(InternetAddress.anyIPv4, 8080);
     _serverUrl = 'http://$localIp:8080';
     
-    print('✅ Group HTTP server started at $_serverUrl');
     
     // Handle requests
     _server!.listen(_handleRequest);
@@ -55,7 +54,6 @@ class GroupHttpCoordinator {
   }
   
   void _handleRequest(HttpRequest request) async {
-    print('📥 HTTP Request: ${request.method} ${request.uri.path}');
     
     try {
       // Parse device ID from headers or query params
@@ -86,7 +84,6 @@ class GroupHttpCoordinator {
           ..close();
       }
     } catch (e) {
-      print('❌ Error handling request: $e');
       request.response
         ..statusCode = 500
         ..write('Internal Server Error')
@@ -112,15 +109,25 @@ class GroupHttpCoordinator {
       return;
     }
     
-    print('📤 Serving $fileName to device $deviceId');
     
     // Create completer for this download if not exists
     _downloadCompleters[deviceId] ??= Completer<bool>();
     _progressControllers[deviceId] ??= StreamController<double>.broadcast();
     
     try {
-      final fileData = file.bytes ?? await File(file.path!).readAsBytes();
-      final totalSize = fileData.length;
+      // Get file size without loading into memory
+      final int totalSize;
+      final bool useStream;
+      
+      if (file.bytes != null) {
+        totalSize = file.bytes!.length;
+        useStream = false;
+      } else if (file.path != null) {
+        totalSize = await File(file.path!).length();
+        useStream = true;
+      } else {
+        throw Exception('File has no bytes or path');
+      }
       
       request.response
         ..headers.contentType = ContentType.binary
@@ -130,27 +137,44 @@ class GroupHttpCoordinator {
       
       // Stream file data with progress tracking
       int sentBytes = 0;
-      const chunkSize = 64 * 1024; // 64KB chunks
       
-      for (int i = 0; i < totalSize; i += chunkSize) {
-        final end = (i + chunkSize < totalSize) ? i + chunkSize : totalSize;
-        final chunk = fileData.sublist(i, end);
+      if (useStream && file.path != null) {
+        // STREAM FROM DISK - handles large files
+        final fileStream = File(file.path!).openRead();
         
-        request.response.add(chunk);
-        sentBytes += chunk.length;
+        await for (final chunk in fileStream) {
+          request.response.add(chunk);
+          sentBytes += chunk.length;
+          
+          // Update progress
+          final progress = sentBytes / totalSize;
+          _deviceProgress[deviceId] = progress;
+          _progressControllers[deviceId]?.add(progress);
+        }
+      } else if (file.bytes != null) {
+        // SMALL FILE IN MEMORY
+        const chunkSize = 65536; // 64KB chunks
+        final fileData = file.bytes!;
         
-        // Update progress
-        final progress = sentBytes / totalSize;
-        _deviceProgress[deviceId] = progress;
-        _progressControllers[deviceId]?.add(progress);
-        
-        // Yield to event loop
-        await Future.delayed(Duration.zero);
+        for (int i = 0; i < totalSize; i += chunkSize) {
+          final end = (i + chunkSize < totalSize) ? i + chunkSize : totalSize;
+          final chunk = fileData.sublist(i, end);
+          
+          request.response.add(chunk);
+          sentBytes += chunk.length;
+          
+          // Update progress
+          final progress = sentBytes / totalSize;
+          _deviceProgress[deviceId] = progress;
+          _progressControllers[deviceId]?.add(progress);
+          
+          // Yield to event loop
+          await Future.delayed(Duration.zero);
+        }
       }
       
       await request.response.close();
       
-      print('✅ Completed serving $fileName to device $deviceId');
       
       // Mark as complete
       _deviceProgress[deviceId] = 1.0;
@@ -161,7 +185,6 @@ class GroupHttpCoordinator {
       }
       
     } catch (e) {
-      print('❌ Error serving file to $deviceId: $e');
       
       if (!_downloadCompleters[deviceId]!.isCompleted) {
         _downloadCompleters[deviceId]!.completeError(e);
@@ -214,7 +237,6 @@ class GroupHttpCoordinator {
       _downloadCompleters.clear();
       _deviceProgress.clear();
       
-      print('🔚 Group HTTP server stopped');
     }
   }
   

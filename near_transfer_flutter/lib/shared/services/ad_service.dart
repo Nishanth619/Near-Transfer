@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'dart:io' show Platform;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../core/ad_config.dart';
 import 'subscription_service.dart';
@@ -18,17 +19,19 @@ class AdService {
   // Track if interstitial was shown this session to avoid spamming
   bool _interstitialShownThisSession = false;
 
+  /// Check if running on mobile (Android/iOS)
+  bool get _isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+
   /// Check if ads are supported on current platform
-  bool get isSupported => !kIsWeb;
+  bool get isSupported => _isMobile;
 
   /// Check if ads should be shown (not premium and supported)
   bool get shouldShowAds => isSupported && !SubscriptionService().isPremium;
 
   /// Initialize the Mobile Ads SDK
   Future<void> initialize() async {
-    // Skip initialization on web
-    if (kIsWeb) {
-      print('AdMob not supported on web platform');
+    // Skip initialization on web and desktop
+    if (!_isMobile) {
       return;
     }
     
@@ -43,32 +46,42 @@ class AdService {
         _loadInterstitialAd();
       }
     } catch (e) {
-      print('Failed to initialize AdMob: $e');
     }
   }
 
   /// Load an interstitial ad
   void _loadInterstitialAd() {
-    if (kIsWeb || !shouldShowAds) return;
+    if (kIsWeb) {
+      debugPrint('InterstitialAd: Skipped - running on web');
+      return;
+    }
+    if (!shouldShowAds) {
+      debugPrint('InterstitialAd: Skipped - shouldShowAds=false (premium: ${SubscriptionService().isPremium})');
+      return;
+    }
+    
+    debugPrint('InterstitialAd: Loading with ID: ${AdConfig.interstitialAdUnitId}');
     
     InterstitialAd.load(
       adUnitId: AdConfig.interstitialAdUnitId,
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
+          debugPrint('InterstitialAd: Loaded successfully!');
           _interstitialAd = ad;
           _isInterstitialAdReady = true;
           
           ad.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
+              debugPrint('InterstitialAd: Dismissed');
               ad.dispose();
               _isInterstitialAdReady = false;
-              // Reload for next time (if still not premium)
               if (shouldShowAds) {
                 _loadInterstitialAd();
               }
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
+              debugPrint('InterstitialAd: Failed to show - ${error.code}: ${error.message}');
               ad.dispose();
               _isInterstitialAdReady = false;
               if (shouldShowAds) {
@@ -78,9 +91,8 @@ class AdService {
           );
         },
         onAdFailedToLoad: (error) {
-          print('Interstitial ad failed to load: ${error.message}');
+          debugPrint('InterstitialAd: Failed to load - ${error.code}: ${error.message}');
           _isInterstitialAdReady = false;
-          // Retry after delay (if still not premium)
           if (shouldShowAds) {
             Future.delayed(const Duration(seconds: 30), _loadInterstitialAd);
           }
@@ -92,19 +104,27 @@ class AdService {
   /// Show interstitial ad (e.g., after transfer completes)
   /// Returns true if ad was shown, false otherwise
   Future<bool> showInterstitialAd() async {
+    debugPrint('InterstitialAd: showInterstitialAd() called');
+    
     // Skip on web or for premium users
-    if (kIsWeb || !shouldShowAds) return false;
+    if (kIsWeb || !shouldShowAds) {
+      debugPrint('InterstitialAd: Not showing - web or premium');
+      return false;
+    }
     
     // Only show once per session to not annoy users
     if (_interstitialShownThisSession) {
+      debugPrint('InterstitialAd: Already shown this session');
       return false;
     }
     
     if (_isInterstitialAdReady && _interstitialAd != null) {
+      debugPrint('InterstitialAd: Showing ad now!');
       _interstitialShownThisSession = true;
       await _interstitialAd!.show();
       return true;
     }
+    debugPrint('InterstitialAd: Not ready (ready=$_isInterstitialAdReady, ad=${_interstitialAd != null})');
     return false;
   }
 

@@ -18,6 +18,7 @@ import '../services/database_service.dart';
 import '../models/discovered_device.dart';
 import '../models/transfer_state.dart' as ts; // Alias to avoid conflict
 import '../utils/transfer_resume_utils.dart';
+import '../services/tcp_transfer_service.dart';
 import '../../core/network_config.dart';
 
 enum TransferState {
@@ -37,6 +38,8 @@ class TransferOrchestrator extends ChangeNotifier {
   
   SignalingServer? _httpServer; // For HTTP fallback
   Timer? _webrtcTimeoutTimer;
+  TcpTransferService? _tcpService; // For TCP direct transfer
+  bool _useTcpTransfer = true; // Use TCP as primary
   
   // State
   TransferState _state = TransferState.idle;
@@ -47,6 +50,9 @@ class TransferOrchestrator extends ChangeNotifier {
   double _progress = 0.0;
   bool _useHttpFallback = false;
   bool _isDisposed = false;
+  bool _isSender = false; // Track if this device is the sender
+  String? _senderDeviceName; // Track the sender name for history
+  int _currentReceivingFileSize = 0; // Track file size for receiver progress
   
   // Speed tracking
   int _bytesTransferred = 0;
@@ -236,7 +242,6 @@ class TransferOrchestrator extends ChangeNotifier {
       );
       
       await _signalingService.sendMessage(preConnect);
-      print('🔒 Pre-connect message sent to lock receiver');
     } catch (e) {
       _state = TransferState.failed;
       onError?.call('Connection failed: $e');
@@ -258,13 +263,13 @@ class TransferOrchestrator extends ChangeNotifier {
     _partnerDeviceName = device.deviceName;
     _partnerIp = device.ip;
     
-    print('📤 Starting transfer: $_currentTransferId');
     
     _state = TransferState.connecting;
     _filesToSend = files;
     _currentFileIndex = 0;
     _selectedFile = files.first;
     _currentFileName = files.first.name;
+    _isSender = true; // Mark as sender
     notifyListeners();
     
     try {
@@ -294,7 +299,6 @@ class TransferOrchestrator extends ChangeNotifier {
       );
       
       await _transferStateDb.insertTransferState(state);
-      print('💾 Created transfer state: $_currentTransferId');
       
       // Check if we need to connect (if prepareConnection wasn't called or failed)
       // We can check if signaling service is connected, but for now let's assume
@@ -322,7 +326,6 @@ class TransferOrchestrator extends ChangeNotifier {
       );
       
       await _signalingService.sendMessage(request);
-      print('Connection request sent for file 1 of ${files.length}');
     } catch (e) {
       _state = TransferState.failed;
       onError?.call('Connection failed: $e');
@@ -342,14 +345,12 @@ class TransferOrchestrator extends ChangeNotifier {
         deviceName: deviceName,
         deviceIp: deviceIp,
       );
-      print('Ready to receive files');
     } catch (e) {
       onError?.call('Failed to start receiver: $e');
     }
   }
 
   void _handleSignalingMessage(SignalingMessage message) {
-    print('Handling signaling message: ${message.type}');
     
     switch (message.type) {
       case SignalingMessageType.connectRequest:
@@ -371,7 +372,12 @@ class TransferOrchestrator extends ChangeNotifier {
         _handleRemoteIceCandidate(message);
         break;
       case SignalingMessageType.fallbackUpload:
-        _handleFallbackUpload(message);
+        // Only receivers should handle fallbackUpload (to download files)
+        // Senders should NOT download their own files
+        if (!_isSender) {
+          _handleFallbackUpload(message);
+        } else {
+        }
         break;
       case SignalingMessageType.preConnect:
         _handlePreConnect(message);
@@ -384,7 +390,6 @@ class TransferOrchestrator extends ChangeNotifier {
         break;
       case SignalingMessageType.resumeReject:
         // Handle resume rejected
-        print('Resume request rejected');
         break;
       case SignalingMessageType.pause:
         _handlePauseSignal(message);
@@ -402,17 +407,126 @@ class TransferOrchestrator extends ChangeNotifier {
         // These are handled by GroupTransferOrchestrator, ignore in single transfer
         break;
         
+      // TCP transfer messages
+      case SignalingMessageType.tcpReady:
+        _handleTcpReady(message);
+        break;
+      case SignalingMessageType.tcpConnect:
+        // Not used on sender side
+        break;
+        
       default:
-        print('⚠️ Unhandled signaling message type: ${message.type}');
         break;
     }
   }
 
   void _handlePreConnect(SignalingMessage message) {
     final senderName = message.data['senderName'] as String;
-    print('🔒 Received pre-connect from $senderName');
     _sessionId = message.sessionId;
     onBusy?.call(senderName);
+  }
+
+  /// Handle TCP ready message from receiver - sender connects and starts transfer
+  void _handleTcpReady(SignalingMessage message) async {
+    if (_isDisposed) return; // Guard against disposed orchestrator
+    
+    final ip = message.data['ip'] as String;
+    final port = message.data['port'] as int;
+    
+    
+    _webrtcTimeoutTimer?.cancel(); // Cancel any timeout
+    
+    try {
+      // Create TCP client and connect
+      _tcpService = TcpTransferService();
+      _tcpService!.onProgress = (progress) {
+        _progress = progress;
+        
+        // Calculate speed
+        if (_selectedFile != null) {
+          _bytesTransferred = (progress * _selectedFile!.size).floor();
+          
+          final now = DateTime.now();
+          final elapsed = now.difference(_lastSpeedUpdate).inMilliseconds;
+          
+          if (elapsed >= 500) {
+            final bytesInInterval = _bytesTransferred - _lastBytesTransferred;
+            final speedBps = bytesInInterval / (elapsed / 1000.0);
+            
+            _speedHistory.add(speedBps);
+            if (_speedHistory.length > 5) {
+              _speedHistory.removeAt(0);
+            }
+            _currentSpeedBytesPerSecond = _speedHistory.reduce((a, b) => a + b) / _speedHistory.length;
+            
+            _lastBytesTransferred = _bytesTransferred;
+            _lastSpeedUpdate = now;
+          }
+        }
+        
+        notifyListeners();
+      };
+      _tcpService!.onConnected = () {
+        _state = TransferState.transferring;
+        notifyListeners();
+      };
+      _tcpService!.onFileStart = (fileName, fileSize) {
+        // Update current file being sent for progress tracking
+        _currentFileName = fileName;
+        _progress = 0.0;
+        _bytesTransferred = 0;
+        _lastBytesTransferred = 0;
+        _lastSpeedUpdate = DateTime.now();
+        
+        // Find the file in _filesToSend and update _selectedFile
+        for (int i = 0; i < _filesToSend.length; i++) {
+          if (_filesToSend[i].name == fileName) {
+            _selectedFile = _filesToSend[i];
+            _currentFileIndex = i;
+            break;
+          }
+        }
+        
+        if (!_isDisposed) notifyListeners();
+      };
+      _tcpService!.onError = (error) {
+        // Don't trigger fallback during transfer, just report error
+        if (_state == TransferState.connecting) {
+          _triggerHttpFallback();
+        } else {
+          onError?.call(error);
+          _state = TransferState.failed;
+          notifyListeners();
+        }
+      };
+      
+      final connected = await _tcpService!.connect(ip, port);
+      
+      if (connected) {
+        _state = TransferState.transferring;
+        _progress = 0.0;
+        _bytesTransferred = 0;
+        _lastBytesTransferred = 0;
+        _lastSpeedUpdate = DateTime.now();
+        _speedHistory.clear();
+        notifyListeners();
+        
+        // Send files via TCP
+        await _tcpService!.sendFiles(_filesToSend);
+        
+        // Transfer complete - wait for receiver to finish processing
+        _state = TransferState.completed;
+        await Future.delayed(const Duration(seconds: 2)); // Give receiver time to save files
+        _tcpService?.close();
+        onTransferComplete?.call();
+        notifyListeners();
+      } else {
+        _triggerHttpFallback();
+      }
+    } catch (e) {
+      _tcpService?.close();
+      _triggerHttpFallback();
+    }
   }
 
   void _handleConnectRequest(SignalingMessage message) {
@@ -425,6 +539,7 @@ class TransferOrchestrator extends ChangeNotifier {
     
     _sessionId = message.sessionId;
     _currentFileName = fileName;
+    _senderDeviceName = senderName; // Store sender name for history
     
     // Store files list for receiver UI (create PlatformFile objects from metadata)
     if (filesList != null && filesList.isNotEmpty) {
@@ -455,8 +570,130 @@ class TransferOrchestrator extends ChangeNotifier {
     final accept = SignalingMessage.accept(_sessionId!);
     await _signalingService.sendMessage(accept);
     
-    // Initialize WebRTC as answerer
-    await _webrtcService.initConnection(isOfferer: false);
+    // Use TCP as primary transfer method
+    if (_useTcpTransfer) {
+      try {
+        // Start TCP server for receiving
+        _tcpService = TcpTransferService();
+        _tcpService!.onProgress = (progress) {
+          _progress = progress;
+          
+          // Calculate speed (same as sender side for consistency)
+          final now = DateTime.now();
+          final elapsed = now.difference(_lastSpeedUpdate).inMilliseconds;
+          
+          if (elapsed >= 500) {
+            // Use the current receiving file size for speed calculation
+            final currentFileSize = _currentReceivingFileSize > 0 
+                ? _currentReceivingFileSize 
+                : 100000000; // Default 100MB if not set
+            final newBytesTransferred = (progress * currentFileSize).floor();
+            final bytesInInterval = newBytesTransferred - _lastBytesTransferred;
+            final speedBps = bytesInInterval / (elapsed / 1000.0);
+            
+            _speedHistory.add(speedBps);
+            if (_speedHistory.length > 5) {
+              _speedHistory.removeAt(0);
+            }
+            _currentSpeedBytesPerSecond = _speedHistory.reduce((a, b) => a + b) / _speedHistory.length;
+            
+            _lastBytesTransferred = newBytesTransferred;
+            _lastSpeedUpdate = now;
+          }
+          
+          if (!_isDisposed) notifyListeners();
+        };
+        _tcpService!.onFileStart = (fileName, fileSize) {
+          // Cancel the timeout timer - we're now actively receiving!
+          _webrtcTimeoutTimer?.cancel();
+          _webrtcTimeoutTimer = null;
+          
+          // Set state to transferring so UI shows progress
+          _state = TransferState.transferring;
+          _currentFileName = fileName;
+          _currentReceivingFileSize = fileSize;  // Store for progress calculation
+          _progress = 0.0;  // Reset progress for each file
+          _bytesTransferred = 0;  // Reset bytes tracking
+          _lastBytesTransferred = 0;
+          _lastSpeedUpdate = DateTime.now();
+          _speedHistory.clear();
+          
+          if (!_isDisposed) notifyListeners();
+        };
+        _tcpService!.onFileReceived = (filePath) async {
+          _receivedFilesCount++;
+          _currentFileIndex++;  // Increment for UI tick marks
+          _progress = 1.0;  // File complete
+          
+          // Save to history database
+          try {
+            final file = File(filePath);
+            final fileName = filePath.split('/').last;
+            final fileSize = await file.length();
+            
+            final db = DatabaseService();
+            await db.insertReceivedFile(
+              fileName: fileName,
+              filePath: filePath,
+              fileSize: fileSize,
+              senderName: _senderDeviceName ?? 'Unknown Device',
+            );
+          } catch (e) {
+          }
+          
+          if (!_isDisposed) notifyListeners();
+        };
+        _tcpService!.onBatchComplete = () {
+          _state = TransferState.completed;
+          onTransferComplete?.call();
+          if (!_isDisposed) notifyListeners();
+        };
+        _tcpService!.onError = (error) {
+          _triggerHttpFallback();
+        };
+        
+        final port = await _tcpService!.startServer();
+        
+        // Send TCP ready message to sender
+        // Get local IP
+        final interfaces = await NetworkInterface.list();
+        String? localIp;
+        for (final interface in interfaces) {
+          for (final addr in interface.addresses) {
+            if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
+              localIp = addr.address;
+              break;
+            }
+          }
+          if (localIp != null) break;
+        }
+        
+        if (localIp != null) {
+          final tcpReadyMsg = SignalingMessage.tcpReady(
+            sessionId: _sessionId!,
+            ip: localIp,
+            port: port,
+          );
+          await _signalingService.sendMessage(tcpReadyMsg);
+          
+          // Set timeout for TCP connection
+          _webrtcTimeoutTimer = Timer(const Duration(seconds: 5), () {
+            if (_state == TransferState.connecting) {
+              _tcpService?.close();
+              _triggerHttpFallback();
+            }
+          });
+        } else {
+          throw Exception('Could not get local IP');
+        }
+      } catch (e) {
+        _triggerHttpFallback();
+      }
+    } else {
+      // Fallback to HTTP (not WebRTC)
+      // Receiver doesn't initiate HTTP fallback - wait for sender to trigger it
+      // HTTP fallback is handled via signaling messages
+    }
   }
 
   Future<void> _declineConnection() async {
@@ -468,40 +705,37 @@ class TransferOrchestrator extends ChangeNotifier {
   }
 
   void _handleAccept(SignalingMessage message) async {
-    print('Connection accepted');
     _state = TransferState.connecting;
     notifyListeners();
     
-    // Initialize WebRTC as offerer
-    await _webrtcService.initConnection(isOfferer: true);
-    
-    // Start WebRTC timeout timer
-    _startWebRTCTimeout();
-    
-    // Wait for ICE gathering to complete
-    await Future.delayed(const Duration(milliseconds: 500));
-    
-    // Create and send offer
-    final offer = await _webrtcService.createOffer();
-    final offerMsg = SignalingMessage.offer(
-      sessionId: _sessionId!,
-      sdp: offer.sdp!,
-    );
-    await _signalingService.sendMessage(offerMsg);
+    // If using TCP transfer, just wait for tcpReady message from receiver
+    // The receiver will start TCP server and send tcpReady
+    // _handleTcpReady will be called when we receive it
+    if (_useTcpTransfer) {
+      
+      // Set timeout for TCP ready message
+      _webrtcTimeoutTimer?.cancel();
+      _webrtcTimeoutTimer = Timer(const Duration(seconds: 5), () {
+        if (_state == TransferState.connecting) {
+          _triggerHttpFallback();
+        }
+      });
+    } else {
+      // Fallback: Use HTTP instead of WebRTC
+      _triggerHttpFallback();
+    }
   }
 
   void _startWebRTCTimeout() {
     _webrtcTimeoutTimer?.cancel();
     _webrtcTimeoutTimer = Timer(const Duration(seconds: 10), () {
       if (_state == TransferState.connecting) {
-        print('⏱️ WebRTC timeout! Switching to HTTP fallback...');
         _triggerHttpFallback();
       }
     });
   }
 
   void _handleDecline(SignalingMessage message) {
-    print('Connection declined');
     _state = TransferState.failed;
     onError?.call('Connection declined by receiver');
     notifyListeners();
@@ -542,7 +776,6 @@ class TransferOrchestrator extends ChangeNotifier {
     if (_isRemoteDescriptionSet) {
       await _webrtcService.addCandidate(candidate);
     } else {
-      print('🧊 Queuing ICE candidate (remote description not set)');
       _pendingIceCandidates.add(message);
     }
   }
@@ -550,7 +783,6 @@ class TransferOrchestrator extends ChangeNotifier {
   void _processPendingIceCandidates() async {
     if (_pendingIceCandidates.isEmpty) return;
     
-    print('🧊 Processing ${_pendingIceCandidates.length} queued ICE candidates');
     for (final message in _pendingIceCandidates) {
       final candidateStr = message.data['candidate'] as String;
       final sdpMid = message.data['sdpMid'] as String?;
@@ -574,7 +806,6 @@ class TransferOrchestrator extends ChangeNotifier {
   }
 
   void _handleDataChannelOpen() {
-    print('Data channel opened - starting transfer');
     _webrtcTimeoutTimer?.cancel(); // Cancel timeout
     _state = TransferState.transferring; // Set to transferring immediately
     _progress = 0.0; // Show loading state
@@ -587,7 +818,6 @@ class TransferOrchestrator extends ChangeNotifier {
   }
 
   void _handleDataChannelClosed() {
-    print('Data channel closed');
   }
 
   Future<void> _startFileTransfer() async {
@@ -607,24 +837,20 @@ class TransferOrchestrator extends ChangeNotifier {
     notifyListeners();
     
     try {
-      print('📂 Loading file: ${_selectedFile!.name} (${_selectedFile!.size} bytes)');
       
       // Load file data - either from bytes (clipboard/virtual files) or from file path
       final Uint8List fileData;
       if (_selectedFile!.bytes != null) {
         // Virtual file with bytes (e.g., clipboard content)
         fileData = _selectedFile!.bytes!;
-        print('✅ Using file bytes directly (virtual file)');
       } else if (_selectedFile!.path != null) {
         // Real file with path
         final file = File(_selectedFile!.path!);
         fileData = await file.readAsBytes();
-        print('✅ File loaded from path');
       } else {
         throw Exception('File has neither bytes nor path');
       }
       
-      print('✅ File ready, starting transfer...');
       
       await _webrtcService.sendFile(
         fileData,
@@ -632,7 +858,6 @@ class TransferOrchestrator extends ChangeNotifier {
         _selectedFile!.size,
       );
       
-      print('✅ File ${_currentFileIndex + 1}/${_filesToSend.length} sent');
       
       // Check if there are more files to send
       _currentFileIndex++;
@@ -643,7 +868,6 @@ class TransferOrchestrator extends ChangeNotifier {
         _progress = 0.0;
         notifyListeners();
         
-        print('📤 Starting file ${_currentFileIndex + 1}/${_filesToSend.length}: ${_selectedFile!.name}');
         await _startFileTransfer(); // Recursive call for next file
       } else {
         // All files transferred
@@ -669,12 +893,10 @@ class TransferOrchestrator extends ChangeNotifier {
   }
 
   void _handleFileReceived(String filePath) {
-    print('File received and saved to: $filePath');
     notifyListeners();
   }
 
   void _handleFileStart(String fileName, int fileSize) {
-    print('Started receiving file: $fileName');
     
     // Find the index of this file in the list
     for (int i = 0; i < _filesToSend.length; i++) {
@@ -690,14 +912,12 @@ class TransferOrchestrator extends ChangeNotifier {
   }
 
   void _handleBatchComplete() {
-    print('Batch transfer complete');
     _state = TransferState.completed;
     onTransferComplete?.call();
     notifyListeners();
   }
 
   void _handleConnectionClosed() {
-    print('Signaling connection closed');
     if (_state != TransferState.completed) {
       _state = TransferState.failed;
       onError?.call('Connection lost');
@@ -706,7 +926,12 @@ class TransferOrchestrator extends ChangeNotifier {
   }
 
   void _handleFallbackUpload(SignalingMessage message) {
-    print('📥 HTTP Fallback: Received download URL');
+    // Belt-and-suspenders: Double check we're not the sender
+    // Sender should NEVER download files, only receive them
+    if (_isSender) {
+      return;
+    }
+    
     final downloadUrl = message.data['downloadUrl'] as String;
     final fileName = message.data['fileName'] as String;
     final fileSize = message.data['fileSize'] as int;
@@ -719,14 +944,14 @@ class TransferOrchestrator extends ChangeNotifier {
   }
 
   Future<void> _triggerHttpFallback() async {
+    if (_isDisposed) return; // Guard against disposed orchestrator
     if (_selectedFile == null && _filesToSend.isEmpty) return;
     
     _useHttpFallback = true;
     _state = TransferState.transferring;
-    notifyListeners();
+    if (!_isDisposed) notifyListeners();
     
     try {
-      print('🌐 Starting HTTP fallback server...');
       
       final files = _filesToSend.isNotEmpty ? _filesToSend : [_selectedFile!];
       
@@ -737,7 +962,6 @@ class TransferOrchestrator extends ChangeNotifier {
         files: files,
       );
       
-      print('✅ HTTP server started at: $serverUrl');
       
       // Send fallback message for each file
       for (int i = 0; i < files.length; i++) {
@@ -755,7 +979,6 @@ class TransferOrchestrator extends ChangeNotifier {
         );
         
         await _signalingService.sendMessage(fallbackMsg);
-        print('✅ Sent HTTP fallback URL for ${file.name}');
         
         // Set up progress callback for real-time upload tracking
         _httpServer!.setProgressCallback(file.name, (progress) {
@@ -764,13 +987,11 @@ class TransferOrchestrator extends ChangeNotifier {
         });
         
         // Wait for receiver to download
-        print('⏳ Waiting for download of ${file.name}...');
         
         try {
           final success = await _httpServer!.waitForTransfer(file.name).timeout(
             const Duration(minutes: 10),
             onTimeout: () {
-              print('⚠️ Timeout waiting for HTTP download of ${file.name}');
               return false;
             },
           );
@@ -779,18 +1000,15 @@ class TransferOrchestrator extends ChangeNotifier {
             _progress = 1.0;
           }
         } catch (e) {
-          print('⚠️ Error waiting for transfer: $e');
         }
         
         notifyListeners();
       }
       
       _state = TransferState.completed;
-      print('✅ HTTP fallback transfer complete');
       onTransferComplete?.call();
       notifyListeners();
     } catch (e) {
-      print('❌ HTTP Fallback error: $e');
       _state = TransferState.failed;
       onError?.call('HTTP fallback failed: $e');
       notifyListeners();
@@ -799,7 +1017,6 @@ class TransferOrchestrator extends ChangeNotifier {
 
   Future<void> _downloadViaHttp(String url, String fileName, int fileSize) async {
     try {
-      print('📥 Downloading file via HTTP: $url');
       
       // Find the index of this file in the list
       for (int i = 0; i < _filesToSend.length; i++) {
@@ -845,7 +1062,6 @@ class TransferOrchestrator extends ChangeNotifier {
           
           // Log progress every 10%
           if ((_progress * 100).toInt() % 10 == 0) {
-            print('📥 Download progress: ${(_progress * 100).toStringAsFixed(0)}%');
           }
         }
         
@@ -853,8 +1069,6 @@ class TransferOrchestrator extends ChangeNotifier {
         await sink.close();
         httpClient.close();
         
-        print('✅ File downloaded: $downloadedBytes bytes');
-        print('✅ File saved to: $filePath');
         
         // Save to history database
         try {
@@ -865,21 +1079,17 @@ class TransferOrchestrator extends ChangeNotifier {
             fileSize: fileSize,
             senderName: 'My Device', // TODO: Get actual sender name
           );
-          print('✅ File added to history');
         } catch (e) {
-          print('⚠️ Failed to save to history: $e');
         }
         
         _progress = 1.0;
         _receivedFilesCount++;
         
-        print('✅ Received file $_receivedFilesCount/$_expectedFilesCount');
         
         // Only complete if all files received
         if (_receivedFilesCount >= _expectedFilesCount) {
           _state = TransferState.completed;
           onTransferComplete?.call();
-          print('✅ All files received via HTTP fallback');
         }
         notifyListeners();
       } else {
@@ -887,7 +1097,6 @@ class TransferOrchestrator extends ChangeNotifier {
         throw Exception('HTTP ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ HTTP download failed: $e');
       _state = TransferState.failed;
       onError?.call('Download failed: $e');
       notifyListeners();
@@ -924,7 +1133,6 @@ class TransferOrchestrator extends ChangeNotifier {
     final fileName = message.data['fileName'] as String;
     final lastChunkSeq = message.data['lastChunkSeq'] as int;
     
-    print('🔄 Received resume request: $fileName @ chunk $lastChunkSeq');
     
     // Validate resume request
     _transferStateDb.getTransferState(transferId).then((state) {
@@ -949,7 +1157,6 @@ class TransferOrchestrator extends ChangeNotifier {
       _signalingService.sendMessage(ackMsg);
       
       // Ready to resume receiving
-      print('✅ Resume ACK sent, ready to continue');
     });
   }
   
@@ -958,11 +1165,9 @@ class TransferOrchestrator extends ChangeNotifier {
     final ok = message.data['ok'] as bool;
     
     if (ok) {
-      print('✅ Resume ACK received, continuing transfer');
       // Resume transfer will be handled by resumeTransfer method
     } else {
       final reason = message.data['reason'] as String?;
-      print('❌ Resume rejected: $reason');
       onError?.call('Resume rejected: $reason');
     }
   }
@@ -971,7 +1176,6 @@ class TransferOrchestrator extends ChangeNotifier {
     final transferId = message.data['transferId'] as String;
     final reason = message.data['reason'] as String;
     
-    print('❌ Resume rejected: $reason');
     onError?.call('Cannot resume: $reason');
     
     // Mark transfer as failed
@@ -982,14 +1186,8 @@ class TransferOrchestrator extends ChangeNotifier {
   
   /// Pause current transfer
   Future<void> pauseCurrentTransfer() async {
-    print('⏸️⏸️⏸️ PAUSE BUTTON CLICKED');
-    print('   Current state: $_state');
-    print('   Transfer ID: $_currentTransferId');
-    print('   HTTP Fallback: $_useHttpFallback');
-    print('   Session ID: $_sessionId');
     
     if (_state == TransferState.transferring) {
-      print('   ✅ Pausing transfer...');
       _state = TransferState.paused;
       
       // Save to database if we have a transfer ID
@@ -1000,107 +1198,81 @@ class TransferOrchestrator extends ChangeNotifier {
       // Pause WebRTC service
       _webrtcService.pauseSending();
       
+      // Pause TCP service if active
+      _tcpService?.pause();
+      
       // Send pause signal to other device
-      print('🔍 [PAUSE] Checking signaling connection...');
-      print('🔍 [PAUSE] Signaling connected: ${_signalingService.isConnected}');
       
       if (_sessionId != null) {
         if (!_signalingService.isConnected) {
-          print('⚠️ [PAUSE] WARNING: Signaling not connected, pause signal may not reach other device');
-          print('⚠️ [PAUSE] Other device will not pause automatically');
         }
         
         try {
-          print('📤 Attempting to send PAUSE signal...');
           final pauseMsg = SignalingMessage.pause(sessionId: _sessionId!);
           await _signalingService.sendMessage(pauseMsg);
-          print('📤 ✅ PAUSE signal sent successfully to other device');
         } catch (e) {
-          print('⚠️ ❌ Failed to send pause signal: $e');
-          print('⚠️ Other device may continue transferring');
           // Still pause locally even if signal fails
         }
       } else {
-        print('⚠️ Cannot send pause signal - no session ID');
       }
       
       // VERIFY that pause was actually set
       await Future.delayed(const Duration(milliseconds: 50));
       final actuallyPaused = _webrtcService.isPaused;
-      print('   🔍 WebRTC Service isPaused: $actuallyPaused');
       
       if (actuallyPaused) {
-        print('✅✅✅ PAUSE CONFIRMED - Transfer is paused');
       } else {
-        print('❌❌❌ PAUSE FAILED - WebRTC service is NOT paused!');
       }
       
-      print('⏸️ Paused transfer');
       notifyListeners();
     } else {
-      print('   ❌ Cannot pause - state is $_state');
     }
   }
   
   /// Resume current paused transfer
   Future<void> resumeCurrentTransfer() async {
-    print('▶️▶️▶️ RESUME BUTTON CLICKED');
-    print('   Current state: $_state');
-    print('   Transfer ID: $_currentTransferId');
-    print('   Session ID: $_sessionId');
     
     if (_state == TransferState.paused) {
-      print('   ✅ Resuming transfer...');
       _state = TransferState.transferring;
       _webrtcService.resumeSending();
       
+      // Resume TCP service if active
+      _tcpService?.resume();
+      
       // Send resume signal to other device
-      print('🔍 [RESUME] Checking signaling connection...');
-      print('🔍 [RESUME] Signaling connected: ${_signalingService.isConnected}');
       
       if (_sessionId != null) {
         if (!_signalingService.isConnected) {
-          print('⚠️ [RESUME] WARNING: Signaling not connected, resume signal may not reach other device');
         }
         
         try {
-          print('📤 Attempting to send RESUME signal...');
           final resumeMsg = SignalingMessage.resume(sessionId: _sessionId!);
           await _signalingService.sendMessage(resumeMsg);
-          print('📤 ✅ RESUME signal sent successfully to other device');
         } catch (e) {
-          print('⚠️ ❌ Failed to send resume signal: $e');
           // Still resume locally even if signal fails
         }
       } else {
-        print('⚠️ Cannot send resume signal - no session ID');
       }
       
-      print('▶️ Resumed transfer');
       notifyListeners();
     } else {
-      print('   ❌ Cannot resume - state is $_state');
     }
   }
   
   /// Handle pause signal from other device
   void _handlePauseSignal(SignalingMessage message) {
-    print('📥 RECEIVED PAUSE SIGNAL from other device');
     if (_state == TransferState.transferring) {
       _state = TransferState.paused;
       _webrtcService.pauseSending();
-      print('⏸️ Paused by remote device');
       notifyListeners();
     }
   }
   
   /// Handle resume signal from other device  
   void _handleResumeSignal(SignalingMessage message) {
-    print('📥 RECEIVED RESUME SIGNAL from other device');
     if (_state == TransferState.paused) {
       _state = TransferState.transferring;
       _webrtcService.resumeSending();
-      print('▶️ Resumed by remote device');
       notifyListeners();
     }
   }
@@ -1110,11 +1282,9 @@ class TransferOrchestrator extends ChangeNotifier {
     final state = await _transferStateDb.getTransferState(transferId);
     
     if (state == null || !state.canResume) {
-      print('❌ Cannot resume transfer: $transferId');
       return false;
     }
     
-    print('🔄 Resuming transfer: $transferId');
     _currentTransferId = transferId;
     _partnerDeviceId = state.partnerDeviceId;
     _partnerDeviceName = state.partnerDeviceName;
@@ -1123,11 +1293,9 @@ class TransferOrchestrator extends ChangeNotifier {
     
     try {
       // 1. Connect to partner device IP
-      print('📡 Connecting to partner: $_partnerIp');
       final connected = await _signalingService.connectToDevice(_partnerIp!);
       
       if (!connected) {
-        print('❌ Failed to connect to partner device');
         onError?.call('Could not connect to partner device');
         return false;
       }
@@ -1148,7 +1316,6 @@ class TransferOrchestrator extends ChangeNotifier {
       );
       
       _signalingService.sendMessage(resumeMsg);
-      print('📤 Resume request sent');
       
       // 4. Wait for resumeAck (handled by _handleResumeAck)
       // The actual resume will proceed once ACK is received
@@ -1165,7 +1332,6 @@ class TransferOrchestrator extends ChangeNotifier {
       
       return true;
     } catch (e) {
-      print('❌ Error resuming transfer: $e');
       onError?.call('Resume failed: $e');
       _isResuming = false;
       return false;

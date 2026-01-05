@@ -23,6 +23,8 @@ enum SignalingMessageType {
   groupLeave, // Leave group transfer session
   groupBroadcast, // Broadcast message to group
   groupMemberUpdate, // Member list changed
+  tcpReady, // TCP server is ready to receive
+  tcpConnect, // Connect to TCP server for transfer
 }
 
 class SignalingMessage {
@@ -313,6 +315,37 @@ class SignalingMessage {
       },
     );
   }
+  
+  // TCP transfer messages
+  static SignalingMessage tcpReady({
+    required String sessionId,
+    required String ip,
+    required int port,
+  }) {
+    return SignalingMessage(
+      type: SignalingMessageType.tcpReady,
+      sessionId: sessionId,
+      data: {
+        'ip': ip,
+        'port': port,
+      },
+    );
+  }
+  
+  static SignalingMessage tcpConnect({
+    required String sessionId,
+    required String ip,
+    required int port,
+  }) {
+    return SignalingMessage(
+      type: SignalingMessageType.tcpConnect,
+      sessionId: sessionId,
+      data: {
+        'ip': ip,
+        'port': port,
+      },
+    );
+  }
 }
 
 class SignalingSocketService extends ChangeNotifier {
@@ -343,14 +376,12 @@ class SignalingSocketService extends ChangeNotifier {
   void enableShakeMode(int timestamp) {
     _isShakeMode = true;
     _shakeTimestamp = timestamp;
-    print('🤝 SignalingSocket: Shake mode enabled with timestamp: $timestamp');
   }
 
   /// Disable shake mode
   void disableShakeMode() {
     _isShakeMode = false;
     _shakeTimestamp = null;
-    print('🤝 SignalingSocket: Shake mode disabled');
   }
   
   // Start server mode (receiver) - with device info for discovery
@@ -375,16 +406,13 @@ class SignalingSocketService extends ChangeNotifier {
       
       _isServerMode = true;
       
-      print('✅ Signaling server started on $deviceIp:${NetworkConfig.tcpPort}');
       
       _serverSocket!.listen((socket) {
-        print('Client connected: ${socket.remoteAddress.address}');
         _handleClientConnection(socket);
       });
       
       notifyListeners();
     } catch (e) {
-      print('Error starting signaling server: $e');
       rethrow;
     }
   }
@@ -408,12 +436,10 @@ class SignalingSocketService extends ChangeNotifier {
             
             final json = jsonDecode(message) as Map<String, dynamic>;
           
-            print('📨 Received message type: ${json['type']} from ${socket.remoteAddress.address}');
             
             // Handle discovery probe - TEMPORARY CONNECTION
             if (json['type'] == 'discovery_probe') {
               isDiscoveryProbe = true;
-              print('🔍 Discovery probe from ${socket.remoteAddress.address}');
               
               // Respond with OUR device info (receiver's info)
               final response = {
@@ -428,12 +454,9 @@ class SignalingSocketService extends ChangeNotifier {
               };
               
               final responseJson = jsonEncode(response) + '\n';
-              print('✅ Sending discovery response: $_deviceName @ $_deviceIp');
-              print('📤 Response size: ${responseJson.length} bytes');
               
               socket.add(utf8.encode(responseJson));
               socket.flush().then((_) {
-                print('✅ Discovery response sent successfully');
                 // Sender will close the connection after receiving response
               });
               return;
@@ -442,33 +465,25 @@ class SignalingSocketService extends ChangeNotifier {
             // This is a REAL signaling connection - set it as the client socket
             if (_clientSocket == null && !isDiscoveryProbe) {
               _clientSocket = socket;
-              print('✅ Signaling client connected from ${socket.remoteAddress.address}');
             }
             
             // Handle regular signaling messages
             final signalingMessage = SignalingMessage.fromJson(json);
             
-            print('📥 [RECV] Received signaling message: ${signalingMessage.type}');
-            print('📥 [RECV] Calling onMessageReceived callback...');
             onMessageReceived?.call(signalingMessage);
-            print('📥 [RECV] Callback completed');
           }
         } catch (e) {
-          print('❌ Error parsing message: $e');
         }
       },
       onDone: () {
         // Only notify if this was the actual signaling socket
         if (socket == _clientSocket) {
-          print('🔌 Signaling client disconnected');
           _clientSocket = null;
           onConnectionClosed?.call();
         } else {
-          print('🔌 Discovery probe connection closed');
         }
       },
       onError: (error) {
-        print('❌ Socket error: $error');
         // Only notify if this was the actual signaling socket
         if (socket == _clientSocket) {
           _clientSocket?.destroy();
@@ -484,12 +499,10 @@ class SignalingSocketService extends ChangeNotifier {
   // Connect to remote device (sender)
   Future<bool> connectToDevice(String ip) async {
     if (_clientSocket != null) {
-      print('Already connected');
       return false;
     }
     
     try {
-      print('Connecting to $ip:${NetworkConfig.tcpPort}...');
       
       _clientSocket = await Socket.connect(
         ip,
@@ -497,7 +510,6 @@ class SignalingSocketService extends ChangeNotifier {
         timeout: NetworkConfig.sessionConnectTimeout,
       );
       
-      print('Connected to $ip');
       
       String buffer = '';
       _clientSocket!.listen(
@@ -516,20 +528,16 @@ class SignalingSocketService extends ChangeNotifier {
               final json = jsonDecode(message) as Map<String, dynamic>;
               final signalingMessage = SignalingMessage.fromJson(json);
               
-              print('Received message: ${signalingMessage.type}');
               onMessageReceived?.call(signalingMessage);
             }
           } catch (e) {
-            print('Error parsing message: $e');
           }
         },
         onDone: () {
-          print('Connection closed');
           _clientSocket = null;
           onConnectionClosed?.call();
         },
         onError: (error) {
-          print('Socket error: $error');
           _clientSocket?.destroy();
           _clientSocket = null;
           onConnectionClosed?.call();
@@ -539,7 +547,6 @@ class SignalingSocketService extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print('Error connecting to device: $e');
       _clientSocket = null;
       return false;
     }
@@ -547,11 +554,8 @@ class SignalingSocketService extends ChangeNotifier {
 
   // Send message
   Future<void> sendMessage(SignalingMessage message) async {
-    print('📤 [SEND] Attempting to send ${message.type}');
-    print('📤 [SEND] Client socket status: ${_clientSocket != null ? "CONNECTED" : "NULL"}');
     
     if (_clientSocket == null) {
-      print('❌ [SEND] Cannot send message: not connected');
       return;
     }
     
@@ -560,10 +564,7 @@ class SignalingSocketService extends ChangeNotifier {
       _clientSocket!.add(utf8.encode(json));
       await _clientSocket!.flush();
       
-      print('✅ [SEND] Sent message: ${message.type}');
     } catch (e) {
-      print('❌ [SEND] Error sending message: $e');
-      print('❌ [SEND] Socket may be closed, attempting to report error');
       rethrow;
     }
   }
@@ -576,7 +577,6 @@ class SignalingSocketService extends ChangeNotifier {
     _serverSocket = null;
     _isServerMode = false;
     notifyListeners();
-    print('Signaling socket closed');
   }
 
   @override

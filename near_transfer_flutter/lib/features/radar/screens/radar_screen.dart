@@ -119,7 +119,7 @@ class _RadarScreenState extends State<RadarScreen>
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -239,7 +239,7 @@ class _RadarScreenState extends State<RadarScreen>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
@@ -300,7 +300,7 @@ class _RadarScreenState extends State<RadarScreen>
                                           shape: BoxShape.circle,
                                           boxShadow: [
                                             BoxShadow(
-                                              color: AppColors.primary.withOpacity(0.5),
+                                              color: AppColors.primary.withValues(alpha: 0.5),
                                               blurRadius: 10,
                                               spreadRadius: 2,
                                             ),
@@ -315,10 +315,8 @@ class _RadarScreenState extends State<RadarScreen>
                                     ),
                                     
                                     // Discovered devices
-                                    ...List.generate(_devices.length, (index) {
-                                      final device = _devices[index];
-                                      final position = _devicePositions[device.deviceId];
-                                      if (position == null) return const SizedBox.shrink();
+                                    ..._devices.where((d) => _devicePositions.containsKey(d.deviceId)).map((device) {
+                                      final position = _devicePositions[device.deviceId]!;
                                       
                                       return Positioned(
                                         left: centerX + position.dx * maxRadius - 20,
@@ -381,7 +379,7 @@ class _RadarScreenState extends State<RadarScreen>
               border: Border.all(color: Colors.white, width: 2),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.withOpacity(0.5),
+                  color: Colors.green.withValues(alpha: 0.5),
                   blurRadius: 8,
                   spreadRadius: 1,
                 ),
@@ -410,7 +408,7 @@ class _RadarScreenState extends State<RadarScreen>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -422,7 +420,7 @@ class _RadarScreenState extends State<RadarScreen>
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -471,7 +469,7 @@ class RadarPainter extends CustomPainter {
     
     // Draw concentric circles
     final circlePaint = Paint()
-      ..color = Colors.grey.withOpacity(0.2)
+      ..color = Colors.grey.withValues(alpha: 0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     
@@ -498,9 +496,9 @@ class RadarPainter extends CustomPainter {
         startAngle: sweepAngle - math.pi / 4,
         endAngle: sweepAngle,
         colors: [
-          Colors.green.withOpacity(0.0),
-          Colors.green.withOpacity(0.3),
-          Colors.green.withOpacity(0.6),
+          Colors.green.withValues(alpha: 0.0),
+          Colors.green.withValues(alpha: 0.3),
+          Colors.green.withValues(alpha: 0.6),
         ],
         stops: const [0.0, 0.7, 1.0],
         transform: GradientRotation(sweepAngle - math.pi / 4),

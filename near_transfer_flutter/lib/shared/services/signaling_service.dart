@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
-import 'dart:math';
 
 class SignalingService {
   static final SignalingService _instance = SignalingService._internal();

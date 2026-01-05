@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+
+/// Check if running on mobile (Android/iOS)
+bool get _isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
 /// Service for managing premium subscriptions and in-app purchases.
 /// Handles purchase flow, verification, and persistent premium status.
@@ -25,11 +29,8 @@ class SubscriptionService extends ChangeNotifier {
   List<ProductDetails> _products = [];
   StreamSubscription<List<PurchaseDetails>>? _subscription;
 
-  // Debug mode for testing without real purchases
-  bool _debugPremiumOverride = false;
-
   /// Check if user has premium (no ads)
-  bool get isPremium => _debugPremiumOverride || _isPremium;
+  bool get isPremium => _isPremium;
 
   /// Check if purchase is in progress
   bool get isLoading => _isLoading;
@@ -38,7 +39,7 @@ class SubscriptionService extends ChangeNotifier {
   List<ProductDetails> get products => _products;
 
   /// Check if in-app purchases are available
-  bool get isAvailable => InAppPurchase.instance.isAvailable() as bool? ?? false;
+  bool get isAvailable => _isMobile && (InAppPurchase.instance.isAvailable() as bool? ?? false);
 
   /// Initialize the subscription service
   Future<void> initialize() async {
@@ -48,9 +49,9 @@ class SubscriptionService extends ChangeNotifier {
       // Load cached premium status first (for offline access)
       await _loadPremiumStatus();
 
-      // Check if IAP is available (skip on web)
-      if (kIsWeb) {
-        debugPrint('In-app purchases not available on web');
+      // Check if IAP is available (skip on web and desktop)
+      if (!_isMobile) {
+        debugPrint('In-app purchases not available on this platform');
         _isInitialized = true;
         return;
       }
@@ -223,19 +224,6 @@ class SubscriptionService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
-  }
-
-  /// Toggle debug premium mode (for testing only)
-  void toggleDebugPremium() {
-    _debugPremiumOverride = !_debugPremiumOverride;
-    notifyListeners();
-    debugPrint('Debug premium mode: $_debugPremiumOverride');
-  }
-
-  /// Set debug premium mode directly
-  void setDebugPremium(bool value) {
-    _debugPremiumOverride = value;
-    notifyListeners();
   }
 
   /// Get price string for display

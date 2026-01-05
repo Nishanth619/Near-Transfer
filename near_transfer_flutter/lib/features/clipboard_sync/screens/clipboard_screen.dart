@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../shared/widgets/animated_background.dart';
 import '../../../shared/widgets/help_button.dart';
+import '../../../shared/widgets/banner_ad_widget.dart';
 import '../../../core/constants.dart';
 import '../models/clipboard_item.dart';
 import '../services/clipboard_service.dart';
@@ -22,6 +23,7 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
   ClipboardItem? _currentClipboard;
   bool _isLoading = true;
   bool _autoSync = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -30,11 +32,24 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
   }
 
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
-      final history = await _clipboardService.getHistory();
+      // First, try to get the current clipboard content
       final current = await _clipboardService.getCurrentClipboardItem();
+      
+      // Then get history from database
+      List<ClipboardItem> history = [];
+      try {
+        history = await _clipboardService.getHistory();
+      } catch (e) {
+        // Database might not be available yet, that's ok
+        debugPrint('Clipboard history not available: $e');
+      }
+      
       final autoSync = _clipboardService.isAutoSyncEnabled;
 
       if (mounted) {
@@ -51,8 +66,21 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
           _isLoading = false;
           _history = [];
           _currentClipboard = null;
+          _errorMessage = 'Could not access clipboard: $e';
         });
       }
+    }
+  }
+
+  Future<void> _refreshClipboard() async {
+    await _loadData();
+    if (mounted && _errorMessage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Clipboard refreshed'),
+          duration: Duration(seconds: 1),
+        ),
+      );
     }
   }
 
@@ -155,9 +183,8 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         title: const Text(
           'Clipboard Sync',
@@ -168,6 +195,11 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
           onPressed: () => context.pop(),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _refreshClipboard,
+            tooltip: 'Refresh Clipboard',
+          ),
           const HelpButton(
             featureName: 'Clipboard Sync',
             helpText: 'Sync and share text between devices.\n\n• View your current clipboard content\n• Save items to history for later\n• Tap the send button to share text\n• Enable auto-sync to automatically sync clipboard',
@@ -180,24 +212,20 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
             ),
         ],
       ),
-      body: AnimatedBackground(
-        child: Container(
-          margin: const EdgeInsets.only(top: kToolbarHeight + 60),
-          padding: const EdgeInsets.fromLTRB(
-            AppConstants.spacingMd,
-            AppConstants.spacingMd,
-            AppConstants.spacingMd,
-            0,
-          ),
-          decoration: const BoxDecoration(
-            color: AppColors.surfaceAlt,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(30),
-              topRight: Radius.circular(30),
+      backgroundColor: AppColors.surfaceAlt,
+      body: Column(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: _buildBody(),
             ),
           ),
-          child: _buildBody(),
-        ),
+          SafeArea(
+            top: false,
+            child: const BannerAdWidget(),
+          ),
+        ],
       ),
     );
   }
@@ -213,14 +241,42 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
       padding: const EdgeInsets.only(bottom: 100),
       child: Column(
         children: [
+          // Error message if any
+          if (_errorMessage != null) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red.shade700),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _errorMessage!,
+                      style: TextStyle(color: Colors.red.shade700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          
           // Auto-sync toggle
           _buildAutoSyncToggle(),
 
           const SizedBox(height: 16),
 
-          // Current clipboard card
+          // Current clipboard card or empty state
           if (_currentClipboard != null) ...[
             _buildCurrentClipboard(),
+            const SizedBox(height: 24),
+          ] else if (_errorMessage == null) ...[
+            _buildNoClipboardContent(),
             const SizedBox(height: 24),
           ],
 
@@ -423,6 +479,60 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
             child: const Text('Save Current Clipboard'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNoClipboardContent() {
+    return Card(
+      elevation: 0,
+      color: Colors.orange.shade50,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.orange.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(
+              Icons.content_paste_go,
+              size: 48,
+              color: Colors.orange.shade700,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No clipboard content',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.orange.shade800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Copy some text first, then tap refresh',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.orange.shade700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _refreshClipboard,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Refresh'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange.shade700,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

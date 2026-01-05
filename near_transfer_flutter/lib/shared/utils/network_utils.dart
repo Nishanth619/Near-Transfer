@@ -9,9 +9,7 @@ class NetworkUtils {
       );
 
       for (var interface in interfaces) {
-        print('Network interface: ${interface.name}');
         for (var addr in interface.addresses) {
-          print('  Address: ${addr.address}, isLoopback: ${addr.isLoopback}');
           
           // Skip loopback
           if (addr.isLoopback) continue;
@@ -20,16 +18,13 @@ class NetworkUtils {
           if (addr.address.startsWith('192.168.') ||
               addr.address.startsWith('10.') ||
               addr.address.startsWith('172.')) {
-            print('Found WiFi/Hotspot IP: ${addr.address}');
             return addr.address;
           }
         }
       }
       
-      print('No WiFi/Hotspot IP found');
       return null;
     } catch (e) {
-      print('Error getting local IP: $e');
       return null;
     }
   }

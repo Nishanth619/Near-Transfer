@@ -45,7 +45,6 @@ class DiscoveryService extends ChangeNotifier {
     _isShakeMode = true;
     _shakeTimestamp = timestamp;
     _signalingService?.enableShakeMode(timestamp);
-    print('🤝 Shake mode enabled with timestamp: $timestamp');
     
     // IMMEDIATELY broadcast shake status via UDP beacon
     _sendBeacon();
@@ -61,7 +60,6 @@ class DiscoveryService extends ChangeNotifier {
     _isShakeMode = false;
     _shakeTimestamp = null;
     _signalingService?.disableShakeMode();
-    print('🤝 Shake mode disabled');
     notifyListeners();
   }
 
@@ -92,13 +90,11 @@ class DiscoveryService extends ChangeNotifier {
         throw Exception('Could not determine local IP address');
       }
       
-      print('Starting discovery on $_localIp');
       
       // Try UDP multicast first
       try {
         await _startUdpDiscovery();
       } catch (e) {
-        print('UDP multicast failed (hotspot?): $e');
       }
       
       // Also start TCP broadcast discovery (works on hotspots)
@@ -110,9 +106,7 @@ class DiscoveryService extends ChangeNotifier {
       _isRunning = true;
       notifyListeners();
       
-      print('Discovery service started');
     } catch (e) {
-      print('Error starting discovery: $e');
       rethrow;
     }
   }
@@ -159,7 +153,6 @@ class DiscoveryService extends ChangeNotifier {
     
     final subnet = '${parts[0]}.${parts[1]}.${parts[2]}';
     
-    print('📡 Scanning subnet: $subnet.1-254');
     
     // Scan entire subnet (1-254) to find all devices
     for (int i = 1; i <= 254; i++) {
@@ -179,7 +172,6 @@ class DiscoveryService extends ChangeNotifier {
         timeout: const Duration(milliseconds: 500),
       );
       
-      print('🔗 Connected to $ip! Sending probe...');
       
       // Send discovery probe with shake info
       final probe = {
@@ -196,7 +188,6 @@ class DiscoveryService extends ChangeNotifier {
       socket.add(utf8.encode(jsonEncode(probe) + '\n'));
       await socket.flush();
       
-      print('📤 Probe sent to $ip, waiting for response...');
       
       bool responseReceived = false;
       String buffer = '';
@@ -204,7 +195,6 @@ class DiscoveryService extends ChangeNotifier {
       // Listen for response with timeout
       final responseTimeout = Timer(const Duration(seconds: 1), () {
         if (!responseReceived) {
-          print('⏱️ Response timeout for $ip');
           socket?.destroy();
         }
       });
@@ -223,7 +213,6 @@ class DiscoveryService extends ChangeNotifier {
               
               final json = jsonDecode(message) as Map<String, dynamic>;
             
-              print('📥 Response from $ip: ${json['type']}');
               
               if (json['type'] == 'discovery_response') {
                 responseReceived = true;
@@ -241,7 +230,6 @@ class DiscoveryService extends ChangeNotifier {
                   );
                 } else {
                   _discoveredDevices[device.deviceId] = device;
-                  print('✅ DISCOVERED: ${device.deviceName} @ ${device.ip} ${device.isShaking ? "🤝 SHAKING" : ""}');
                 }
                 
                 notifyListeners();
@@ -251,7 +239,6 @@ class DiscoveryService extends ChangeNotifier {
               }
             }
           } catch (e) {
-            print('❌ Error parsing response from $ip: $e');
           }
         },
         onDone: () {
@@ -276,7 +263,6 @@ class DiscoveryService extends ChangeNotifier {
     _discoveredDevices.clear();
     _isRunning = false;
     notifyListeners();
-    print('Discovery service stopped');
   }
 
   void _startBeaconBroadcast() {
@@ -314,12 +300,9 @@ class DiscoveryService extends ChangeNotifier {
         NetworkConfig.multicastPort,
       );
       if (_isShakeMode) {
-        print('📢 SHAKE BEACON SENT: $_deviceName @ $_localIp (timestamp: $_shakeTimestamp)');
       } else {
-        print('📢 Beacon sent: $_deviceName @ $_localIp');
       }
     } catch (e) {
-      print('Error sending beacon: $e');
     }
   }
 
@@ -346,20 +329,16 @@ class DiscoveryService extends ChangeNotifier {
             shakeTimestamp: device.shakeTimestamp,
           );
           if (device.isShaking) {
-            print('📡 SHAKE BEACON RECEIVED: ${device.deviceName} @ ${device.ip} (timestamp: ${device.shakeTimestamp})');
           }
         } else {
           _discoveredDevices[device.deviceId] = device;
           if (device.isShaking) {
-            print('✅ NEW SHAKING DEVICE DISCOVERED: ${device.deviceName} @ ${device.ip} (timestamp: ${device.shakeTimestamp})');
           } else {
-            print('✅ Device discovered: ${device.deviceName} @ ${device.ip}');
           }
         }
         
         notifyListeners();
       } catch (e) {
-        print('Error parsing beacon: $e');
       }
     }
   }
@@ -384,7 +363,6 @@ class DiscoveryService extends ChangeNotifier {
     if (staleDevices.isNotEmpty) {
       for (final id in staleDevices) {
         final device = _discoveredDevices.remove(id);
-        print('Removed stale device: ${device?.deviceName}');
       }
       notifyListeners();
     }
@@ -411,7 +389,6 @@ class DiscoveryService extends ChangeNotifier {
       
       return null;
     } catch (e) {
-      print('Error getting local IP: $e');
       return null;
     }
   }

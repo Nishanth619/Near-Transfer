@@ -25,7 +25,6 @@ class GroupSessionService extends ChangeNotifier {
     _isHost = true;
     notifyListeners();
     
-    print('✅ Created group session: $groupId');
     return groupId;
   }
   
@@ -38,7 +37,6 @@ class GroupSessionService extends ChangeNotifier {
     final connection = DeviceConnection.fromDevice(device);
     _currentSession!.addMember(connection);
     
-    print('✅ Added ${device.deviceName} to group (${_currentSession!.members.length} members)');
     notifyListeners();
   }
   
@@ -48,7 +46,6 @@ class GroupSessionService extends ChangeNotifier {
     
     _currentSession!.removeMember(deviceId);
     
-    print('❌ Removed device $deviceId from group');
     notifyListeners();
   }
   
@@ -99,7 +96,6 @@ class GroupSessionService extends ChangeNotifier {
     final device = getMember(deviceId);
     if (device != null) {
       device.markAsFailed(error);
-      print('❌ Device ${device.deviceName} failed: $error');
       notifyListeners();
     }
   }
@@ -118,7 +114,6 @@ class GroupSessionService extends ChangeNotifier {
       try {
         await member.signalingService?.sendMessage(message);
       } catch (e) {
-        print('⚠️ Failed to send message to ${member.deviceName}: $e');
       }
     }
   }
@@ -154,7 +149,6 @@ class GroupSessionService extends ChangeNotifier {
   void endSession() {
     if (_currentSession == null) return;
     
-    print('🔚 Ending group session: ${_currentSession!.groupId}');
     
     _currentSession!.dispose();
     _currentSession = null;

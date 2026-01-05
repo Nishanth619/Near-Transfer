@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../../../shared/widgets/animated_background.dart';
 import '../../../shared/widgets/help_button.dart';
+import '../../../shared/widgets/banner_ad_widget.dart';
 import '../../../core/constants.dart';
 import '../../../shared/services/network_speed_service.dart';
 import '../../../shared/services/discovery_service.dart';
@@ -118,9 +119,8 @@ class _SpeedTestScreenState extends State<SpeedTestScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         title: const Text('Speed Test', style: TextStyle(color: Colors.white)),
         leading: IconButton(
@@ -134,64 +134,63 @@ class _SpeedTestScreenState extends State<SpeedTestScreen>
           ),
         ],
       ),
-      body: AnimatedBackground(
-        child: Container(
-          margin: const EdgeInsets.only(top: kToolbarHeight + 20),
-          decoration: const BoxDecoration(
-            color: AppColors.surfaceAlt,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(30),
-              topRight: Radius.circular(30),
-            ),
-          ),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                // Device selector
-                _buildDeviceSelector(),
-                const SizedBox(height: 24),
-                
-                // Speed gauge
-                _buildSpeedGauge(),
-                const SizedBox(height: 24),
-                
-                // Status text
-                Text(
-                  _status,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
+      backgroundColor: AppColors.surfaceAlt,
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  // Device selector
+                  _buildDeviceSelector(),
+                  const SizedBox(height: 24),
+                  
+                  // Speed gauge
+                  _buildSpeedGauge(),
+                  const SizedBox(height: 24),
+                  
+                  // Status text
+                  Text(
+                    _status,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                
-                // Results (if available)
-                if (_result != null) _buildResults(),
-                
-                const SizedBox(height: 32),
-                
-                // Start button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _isTesting ? null : _startSpeedTest,
-                    icon: Icon(_isTesting ? Icons.hourglass_empty : Icons.speed),
-                    label: Text(_isTesting ? 'Testing...' : 'Start Test'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                  const SizedBox(height: 24),
+                  
+                  // Results (if available)
+                  if (_result != null) _buildResults(),
+                  
+                  const SizedBox(height: 32),
+                  
+                  // Start button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _isTesting ? null : _startSpeedTest,
+                      icon: Icon(_isTesting ? Icons.hourglass_empty : Icons.speed),
+                      label: Text(_isTesting ? 'Testing...' : 'Start Test'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
+          SafeArea(
+            top: false,
+            child: const BannerAdWidget(),
+          ),
+        ],
       ),
     );
   }
@@ -330,7 +329,7 @@ class _SpeedTestScreenState extends State<SpeedTestScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -342,7 +341,7 @@ class _SpeedTestScreenState extends State<SpeedTestScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
-              color: _getQualityColor(_result!.quality).withOpacity(0.1),
+              color: _getQualityColor(_result!.quality).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(

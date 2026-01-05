@@ -1,8 +1,8 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/animated_background.dart';
 import '../../../shared/widgets/help_button.dart';
+import '../../../shared/widgets/banner_ad_widget.dart';
 import '../../../core/constants.dart';
 import '../models/contact_item.dart';
 import '../services/contact_service.dart';
@@ -84,7 +84,6 @@ class _ContactManagerScreenState extends State<ContactManagerScreen> {
 
     // Export to vCard
     final vcardData = _contactService.exportToVCard(selected);
-    final vcardBytes = Uint8List.fromList(vcardData.codeUnits);
 
     // Navigate to device discovery with vCard file
     context.push('/discovery', extra: {
@@ -97,9 +96,8 @@ class _ContactManagerScreenState extends State<ContactManagerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         title: const Text(
           'Share Contacts',
@@ -116,66 +114,62 @@ class _ContactManagerScreenState extends State<ContactManagerScreen> {
           ),
         ],
       ),
-      body: AnimatedBackground(
-        child: Container(
-          margin: const EdgeInsets.only(top: kToolbarHeight + 60),
-          padding: const EdgeInsets.fromLTRB(
-            AppConstants.spacingMd,
-            AppConstants.spacingMd,
-            AppConstants.spacingMd,
-            0,
-          ),
-          decoration: const BoxDecoration(
-            color: AppColors.surfaceAlt,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(30),
-              topRight: Radius.circular(30),
+      backgroundColor: AppColors.surfaceAlt,
+      body: Column(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                children: [
+                  // Search bar
+                  TextField(
+                    controller: _searchController,
+                    onChanged: _onSearch,
+                    decoration: InputDecoration(
+                      hintText: 'Search contacts...',
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16),
+
+                  // Contacts list
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _filteredContacts.isEmpty
+                            ? const Center(
+                                child: Text('No contacts found'),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.only(bottom: 80),
+                                itemCount: _filteredContacts.length,
+                                itemBuilder: (context, index) {
+                                  final contact = _filteredContacts[index];
+                                  return ContactListItem(
+                                    contact: contact,
+                                    onTap: () => _toggleSelection(index),
+                                    onCheckboxChanged: (_) => _toggleSelection(index),
+                                  );
+                                },
+                              ),
+                  ),
+                ],
+              ),
             ),
           ),
-          child: Column(
-            children: [
-              // Search bar
-              TextField(
-                controller: _searchController,
-                onChanged: _onSearch,
-                decoration: InputDecoration(
-                  hintText: 'Search contacts...',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-
-              // Contacts list
-              Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _filteredContacts.isEmpty
-                        ? const Center(
-                            child: Text('No contacts found'),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.only(bottom: 100),
-                            itemCount: _filteredContacts.length,
-                            itemBuilder: (context, index) {
-                              final contact = _filteredContacts[index];
-                              return ContactListItem(
-                                contact: contact,
-                                onTap: () => _toggleSelection(index),
-                                onCheckboxChanged: (_) => _toggleSelection(index),
-                              );
-                            },
-                          ),
-              ),
-            ],
+          SafeArea(
+            top: false,
+            child: const BannerAdWidget(),
           ),
-        ),
+        ],
       ),
       floatingActionButton: _selectedContacts.isNotEmpty
           ? FloatingActionButton.extended(

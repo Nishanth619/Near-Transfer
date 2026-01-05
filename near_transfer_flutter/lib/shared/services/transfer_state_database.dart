@@ -74,7 +74,6 @@ class TransferStateDatabase {
       CREATE INDEX idx_transfer_batch ON transfer_states(batch_id)
     ''');
 
-    print('✅ Transfer state database created');
   }
 
   /// Insert a new transfer state
@@ -85,7 +84,6 @@ class TransferStateDatabase {
       state.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    print('💾 Saved transfer state: ${state.id}');
   }
 
   /// Update an existing transfer state
@@ -168,7 +166,6 @@ class TransferStateDatabase {
       where: 'id = ?',
       whereArgs: [id],
     );
-    print('🗑️ Deleted transfer state: $id');
   }
 
   /// Delete all completed transfers
@@ -179,7 +176,6 @@ class TransferStateDatabase {
       where: 'status = ?',
       whereArgs: ['completed'],
     );
-    print('🗑️ Deleted $count completed transfers');
     return count;
   }
 
@@ -194,7 +190,6 @@ class TransferStateDatabase {
       where: 'last_updated < ? AND status IN (?, ?)',
       whereArgs: [cutoffTime, 'completed', 'failed'],
     );
-    print('🗑️ Deleted $count old transfers (>$days days)');
     return count;
   }
 
@@ -247,7 +242,6 @@ class TransferStateDatabase {
       where: 'id = ?',
       whereArgs: [id],
     );
-    print('⏸️ Transfer paused: $id');
   }
 
   /// Mark transfer as completed
@@ -264,7 +258,6 @@ class TransferStateDatabase {
       where: 'id = ?',
       whereArgs: [id],
     );
-    print('✅ Transfer completed: $id');
   }
 
   /// Mark transfer as failed
@@ -279,7 +272,6 @@ class TransferStateDatabase {
       where: 'id = ?',
       whereArgs: [id],
     );
-    print('❌ Transfer failed: $id');
   }
 
   /// Close database connection
