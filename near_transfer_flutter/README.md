@@ -158,6 +158,7 @@ lib/
 │   ├── models/               # Data models
 │   ├── services/             # Core services
 │   │   ├── tcp_transfer_service.dart      # Direct TCP file transfer
+│   │   ├── webrtc_service.dart            # WebRTC ICE/SDP negotiation
 │   │   ├── http_fallback_service.dart     # HTTP fallback for reliability
 │   │   ├── discovery_service.dart         # UDP device discovery
 │   │   ├── signaling_socket_service.dart  # Connection signaling
