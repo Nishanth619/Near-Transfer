@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  analyze:
+    name: Analyze & Format
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+          
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: ./near_transfer_flutter
+        
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+        working-directory: ./near_transfer_flutter
+        
+      - name: Analyze project source
+        run: flutter analyze --no-fatal-infos
+        working-directory: ./near_transfer_flutter
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+          
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: ./near_transfer_flutter
+        
+      - name: Run unit tests
+        run: flutter test --coverage
+        working-directory: ./near_transfer_flutter
+
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    needs: [analyze, test]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+          
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: ./near_transfer_flutter
+        
+      - name: Build APK
+        run: flutter build apk --debug
+        working-directory: ./near_transfer_flutter
