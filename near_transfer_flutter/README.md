@@ -170,11 +170,24 @@ lib/
 └── main.dart                 # Application entry point
 ```
 
+### Architecture Overview
+
+NearTransfer uses a **hybrid peer-to-peer architecture**:
+
+- **TCP sockets** are used as the primary channel for high-performance file transfer
+- **WebRTC protocols** (ICE, SDP) are used for peer discovery and connection negotiation
+- **Signaling** is implemented separately via TCP sockets to exchange negotiation metadata
+- **HTTP transfer** is used as a fallback mechanism when direct TCP communication is not possible
+
+This approach balances **performance**, **reliability**, and **network compatibility**.
+
 ### Key Engineering Decisions
 
 | Decision | Rationale |
 |----------|-----------|
-| **TCP Sockets with HTTP Fallback** | Direct TCP provides lower latency and higher throughput for local transfers. HTTP used as fallback for reliability. |
+| **TCP as Primary Transfer** | Direct TCP provides lower latency and higher throughput for local LAN transfers (10-50 MB/s) |
+| **Separate Signaling Layer** | WebRTC handles ICE/SDP negotiation; signaling implemented via TCP for control |
+| **HTTP Fallback** | Reliable backup when TCP fails due to firewall or NAT restrictions |
 | **UDP Discovery + TCP Probing** | UDP broadcast for fast discovery, TCP verification ensures connection reliability |
 | **Streaming to Disk** | Files written directly to disk during transfer to prevent memory overflow with large files |
 | **Isolate-based Processing** | Heavy file operations run in separate isolates to maintain 60fps UI |
@@ -196,8 +209,9 @@ lib/
 - **Provider** 6.x
 
 ### Networking
-- **dart:io** — Raw TCP/UDP sockets
-- **http** — HTTP fallback for reliability
+- **dart:io** — Raw TCP/UDP sockets (primary transfer)
+- **flutter_webrtc** — ICE/SDP connection negotiation
+- **http** — HTTP fallback transfers
 
 ### Storage
 - **sqflite** — Mobile SQLite

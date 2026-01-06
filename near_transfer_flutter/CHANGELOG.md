@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Core Features**
   - Direct TCP socket file transfer (10-50 MB/s)
+  - WebRTC protocols for connection negotiation (ICE, SDP)
   - HTTP fallback for reliable transfers
   - UDP broadcast device discovery
   - TCP subnet scanning for reliable detection
