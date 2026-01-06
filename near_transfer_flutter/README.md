@@ -158,7 +158,7 @@ lib/
 │   ├── models/               # Data models
 │   ├── services/             # Core services
 │   │   ├── tcp_transfer_service.dart      # Direct TCP file transfer
-│   │   ├── webrtc_service.dart            # WebRTC P2P fallback
+│   │   ├── http_fallback_service.dart     # HTTP fallback for reliability
 │   │   ├── discovery_service.dart         # UDP device discovery
 │   │   ├── signaling_socket_service.dart  # Connection signaling
 │   │   ├── database_service.dart          # SQLite persistence
@@ -174,7 +174,7 @@ lib/
 
 | Decision | Rationale |
 |----------|-----------|
-| **TCP Sockets over WebRTC** | Direct TCP provides lower latency and higher throughput for local transfers. WebRTC used as fallback. |
+| **TCP Sockets with HTTP Fallback** | Direct TCP provides lower latency and higher throughput for local transfers. HTTP used as fallback for reliability. |
 | **UDP Discovery + TCP Probing** | UDP broadcast for fast discovery, TCP verification ensures connection reliability |
 | **Streaming to Disk** | Files written directly to disk during transfer to prevent memory overflow with large files |
 | **Isolate-based Processing** | Heavy file operations run in separate isolates to maintain 60fps UI |
@@ -196,8 +196,8 @@ lib/
 - **Provider** 6.x
 
 ### Networking
-- **flutter_webrtc** — WebRTC P2P connections
 - **dart:io** — Raw TCP/UDP sockets
+- **http** — HTTP fallback for reliability
 
 ### Storage
 - **sqflite** — Mobile SQLite
