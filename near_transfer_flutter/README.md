@@ -226,8 +226,6 @@ This approach balances **performance**, **reliability**, and **network compatibi
 - **google_fonts** — Typography
 - **animate_do** — Animations
 - **glassmorphism** — Modern UI effects
-- **qr_flutter** — QR code generation
-- **mobile_scanner** — QR code scanning
 
 ### Platform Features
 - **file_picker** — Native file selection
