@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import '../../../shared/widgets/animated_background.dart';
 import '../../../shared/widgets/help_button.dart';
@@ -392,6 +393,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _openFile(String filePath) async {
     try {
+      final fileName = filePath.split('/').last.toLowerCase();
+      
+      // Special handling for APK files
+      if (fileName.endsWith('.apk') && Platform.isAndroid) {
+        await _installApk(filePath);
+        return;
+      }
+      
       final result = await OpenFile.open(filePath);
       if (result.type != ResultType.done && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -410,6 +419,92 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _installApk(String filePath) async {
+    try {
+      // Check if we can install unknown apps
+      final canInstall = await _canInstallApks();
+      
+      if (!canInstall) {
+        // Request permission first
+        final status = await Permission.requestInstallPackages.request();
+        
+        if (status.isGranted) {
+          // Permission granted, proceed with install
+          final result = await OpenFile.open(filePath);
+          if (result.type != ResultType.done && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Cannot install app: ${result.message}'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          return;
+        }
+        
+        // Permission still denied, show dialog to open settings
+        if (mounted) {
+          final shouldOpenSettings = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Permission Required'),
+              content: const Text(
+                'To install apps, you need to allow installation from unknown sources.\n\n'
+                'Please enable "Allow from this source" in Settings.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Open Settings'),
+                ),
+              ],
+            ),
+          );
+          
+          if (shouldOpenSettings == true) {
+            // Open app settings using permission_handler
+            await openAppSettings();
+          }
+        }
+        return;
+      }
+      
+      // Permission granted, try to install
+      final result = await OpenFile.open(filePath);
+      if (result.type != ResultType.done && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Cannot install app: ${result.message}'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error installing app: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<bool> _canInstallApks() async {
+    try {
+      // Use permission_handler to check
+      final status = await Permission.requestInstallPackages.status;
+      return status.isGranted;
+    } catch (e) {
+      return false;
     }
   }
 

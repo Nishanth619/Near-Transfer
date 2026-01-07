@@ -75,7 +75,9 @@ class _ContactManagerScreenState extends State<ContactManagerScreen> {
 
   void _shareContacts() async {
     final selected = _selectedContacts;
+    debugPrint('[CONTACTS] _shareContacts called, selected count: ${selected.length}');
     if (selected.isEmpty) {
+      debugPrint('[CONTACTS] No contacts selected');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select contacts to share')),
       );
@@ -84,6 +86,8 @@ class _ContactManagerScreenState extends State<ContactManagerScreen> {
 
     // Export to vCard
     final vcardData = _contactService.exportToVCard(selected);
+    debugPrint('[CONTACTS] vCard data length: ${vcardData.length} chars');
+    debugPrint('[CONTACTS] vCard preview: ${vcardData.substring(0, vcardData.length > 100 ? 100 : vcardData.length)}...');
 
     // Navigate to device discovery with vCard file
     context.push('/discovery', extra: {

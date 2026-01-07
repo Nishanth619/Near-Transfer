@@ -93,13 +93,20 @@ class HelpButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(
-        Icons.help_outline,
-        color: iconColor ?? Colors.white.withValues(alpha: 0.8),
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: IconButton(
+        icon: Icon(
+          Icons.help_outline,
+          color: iconColor ?? Colors.white.withValues(alpha: 0.8),
+          size: 22,
+        ),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        onPressed: () => _showHelpDialog(context),
+        tooltip: 'Help',
       ),
-      onPressed: () => _showHelpDialog(context),
-      tooltip: 'Help',
     );
   }
 }

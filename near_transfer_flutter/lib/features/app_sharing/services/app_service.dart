@@ -1,13 +1,34 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:flutter/services.dart';
 import 'package:installed_apps/installed_apps.dart';
 import 'package:installed_apps/app_info.dart';
 import '../models/app_item.dart';
 
 /// Service for managing installed applications
 class AppService {
+  static const _channel = MethodChannel('com.neartransfer.app/apk_info');
+
   /// Check if running on mobile (Android/iOS)
   bool get _isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+
+  /// Get APK info (path and size) for a package
+  Future<Map<String, dynamic>?> _getApkInfo(String packageName) async {
+    if (!Platform.isAndroid) return null;
+    
+    try {
+      final result = await _channel.invokeMethod('getApkInfo', {
+        'packageName': packageName,
+      });
+      if (result is Map) {
+        return Map<String, dynamic>.from(result);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting APK info for $packageName: $e');
+      return null;
+    }
+  }
 
   /// Get all installed applications
   Future<List<AppItem>> getAllApps() async {
@@ -27,19 +48,15 @@ class AppService {
       
       for (final app in apps) {
         try {
-          // Get APK file info for size
-          int size = 0;
           String apkPath = '';
+          int size = 0;
           
           if (app.packageName != null) {
-            try {
-              // Try to get the APK path using the package name
-              apkPath = '/data/app/${app.packageName}/${app.packageName}.apk';
-              // We can't easily get file size without root access
-              // Estimate based on typical app sizes
-              size = 10 * 1024 * 1024; // Default 10MB estimate
-            } catch (e) {
-              // Ignore errors getting APK path
+            // Get actual APK path and size from platform channel
+            final apkInfo = await _getApkInfo(app.packageName!);
+            if (apkInfo != null) {
+              apkPath = apkInfo['path'] as String? ?? '';
+              size = (apkInfo['size'] as int?) ?? 0;
             }
           }
 

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../core/network_config.dart';
@@ -194,8 +195,10 @@ class TcpTransferService {
       'index': index,
       'total': total,
     });
+    debugPrint('[TCP SEND] Sending file: ${file.name}, size: $fileSize bytes, index: $index/$total');
     _socket!.write('$metadata\n');
     await _socket!.flush();
+    debugPrint('[TCP SEND] Metadata sent, starting data transfer...');
     
     // Notify sender UI about file start (for progress tracking)
     onFileStart?.call(file.name, fileSize);
@@ -221,7 +224,10 @@ class TcpTransferService {
         _socket!.add(chunk);
         bytesSent += chunk.length;
         
-        // Report progress
+        // Report progress (log every 1MB or so)
+        if (bytesSent % 1048576 < chunk.length || bytesSent == chunk.length) {
+          debugPrint('[TCP SEND] Progress: ${(bytesSent / fileSize * 100).toStringAsFixed(1)}% ($bytesSent / $fileSize)');
+        }
         final progress = bytesSent / fileSize;
         onProgress?.call(progress);
         
@@ -284,6 +290,7 @@ class TcpTransferService {
       final directory = await getApplicationDocumentsDirectory();
       
       await for (final data in _socket!) {
+        debugPrint('[TCP RECEIVE] Got data chunk: ${data.length} bytes, receivingFile: $receivingFile');
         if (_isCancelled) break;
         
         // CRITICAL: Handle file data FIRST - write directly to disk WITHOUT buffering
@@ -307,6 +314,7 @@ class TcpTransferService {
           
           // Report progress
           final progress = bytesReceived / currentFileSize!;
+          debugPrint('[TCP RECEIVE] Progress (file_data): ${(progress * 100).toStringAsFixed(1)}% ($bytesReceived / $currentFileSize)');
           onProgress?.call(progress.clamp(0.0, 1.0));
           
           // Check if file is complete
@@ -385,6 +393,7 @@ class TcpTransferService {
                   
                   // Report progress
                   final progress = bytesReceived / currentFileSize!;
+                  debugPrint('[TCP RECEIVE] Progress (after_file_start): ${(progress * 100).toStringAsFixed(1)}%');
                   onProgress?.call(progress.clamp(0.0, 1.0));
                   
                   // Check if file is already complete
@@ -400,6 +409,7 @@ class TcpTransferService {
                   }
                 }
               } else if (type == 'batch_complete') {
+                debugPrint('[TCP RECEIVE] batch_complete received! onBatchComplete callback is ${onBatchComplete != null ? "SET" : "NULL"}');
                 batchCompleted = true;
                 onBatchComplete?.call();
                 return;
@@ -430,6 +440,7 @@ class TcpTransferService {
                 
                 // Report progress
                 final progress = bytesReceived / currentFileSize!;
+                debugPrint('[TCP RECEIVE] Progress (pending_binary): ${(progress * 100).toStringAsFixed(1)}%');
                 onProgress?.call(progress.clamp(0.0, 1.0));
               }
             }

@@ -165,20 +165,23 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
   }
 
   void _sendClipboard() {
-    if (_currentClipboard == null || _currentClipboard!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Clipboard is empty')),
-      );
-      return;
-    }
-
-    // Navigate to device discovery with clipboard content
-    // Pass the text content as extra data
-    context.push('/discovery', extra: {
-      'type': 'clipboard',
-      'content': _currentClipboard!.content,
-    });
+  debugPrint('[CLIPBOARD] _sendClipboard called, _currentClipboard: $_currentClipboard');
+  if (_currentClipboard == null || _currentClipboard!.isEmpty) {
+    debugPrint('[CLIPBOARD] Clipboard is empty or null');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Clipboard is empty')),
+    );
+    return;
   }
+
+  debugPrint('[CLIPBOARD] Content: ${_currentClipboard!.content.substring(0, _currentClipboard!.content.length > 50 ? 50 : _currentClipboard!.content.length)}...');
+  // Navigate to device discovery with clipboard content
+  // Pass the text content as extra data
+  context.push('/discovery', extra: {
+    'type': 'clipboard',
+    'content': _currentClipboard!.content,
+  });
+}
 
   @override
   Widget build(BuildContext context) {

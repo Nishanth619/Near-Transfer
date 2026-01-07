@@ -576,6 +576,7 @@ class TransferOrchestrator extends ChangeNotifier {
         // Start TCP server for receiving
         _tcpService = TcpTransferService();
         _tcpService!.onProgress = (progress) {
+          debugPrint('[ORCHESTRATOR] Receiver onProgress called: ${(progress * 100).toStringAsFixed(1)}%');
           _progress = progress;
           
           // Calculate speed (same as sender side for consistency)
@@ -918,9 +919,16 @@ class TransferOrchestrator extends ChangeNotifier {
   }
 
   void _handleConnectionClosed() {
-    if (_state != TransferState.completed) {
+    // CRITICAL: Don't mark as failed if transfer actually completed
+    // Race condition: connection close event might arrive before batch_complete processed
+    if (_state != TransferState.completed && _progress < 0.99) {
       _state = TransferState.failed;
       onError?.call('Connection lost');
+      notifyListeners();
+    } else if (_progress >= 0.99 && _state != TransferState.completed) {
+      // Transfer finished but state not yet updated - mark as completed
+      _state = TransferState.completed;
+      onTransferComplete?.call();
       notifyListeners();
     }
   }

@@ -27,97 +27,76 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       body: _screens[_currentIndex],
       extendBody: true,
-      bottomNavigationBar: Container(
-        height: 70,
-        margin: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(25),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF6C63FF),
-              Color(0xFF5A52D5),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          height: 65,
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(25),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF6C63FF),
+                Color(0xFF5A52D5),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
             ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(25),
-          child: Theme(
-            data: Theme.of(context).copyWith(
-              splashColor: Colors.transparent,
-              highlightColor: Colors.transparent,
-            ),
-            child: BottomNavigationBar(
-              currentIndex: _currentIndex,
-              onTap: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
-              selectedItemColor: Colors.white,
-              unselectedItemColor: Colors.white.withValues(alpha: 0.5),
-              selectedFontSize: 12,
-              unselectedFontSize: 11,
-              type: BottomNavigationBarType.fixed,
-              elevation: 0,
-              backgroundColor: Colors.transparent,
-              selectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(25),
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
               ),
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: Icon(Icons.home_rounded, size: 24),
-                  ),
-                  activeIcon: Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: Icon(Icons.home_rounded, size: 26),
-                  ),
-                  label: 'Home',
+              child: BottomNavigationBar(
+                currentIndex: _currentIndex,
+                onTap: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                },
+                selectedItemColor: Colors.white,
+                unselectedItemColor: Colors.white.withValues(alpha: 0.5),
+                selectedFontSize: 11,
+                unselectedFontSize: 10,
+                iconSize: 22,
+                type: BottomNavigationBarType.fixed,
+                elevation: 0,
+                backgroundColor: Colors.transparent,
+                selectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
                 ),
-                BottomNavigationBarItem(
-                  icon: Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: Icon(Icons.apps_rounded, size: 24),
+                items: const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.home_rounded),
+                    activeIcon: Icon(Icons.home_rounded, size: 24),
+                    label: 'Home',
                   ),
-                  activeIcon: Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: Icon(Icons.apps_rounded, size: 26),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.apps_rounded),
+                    activeIcon: Icon(Icons.apps_rounded, size: 24),
+                    label: 'More',
                   ),
-                  label: 'More',
-                ),
-                BottomNavigationBarItem(
-                  icon: Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: Icon(Icons.history_rounded, size: 24),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.history_rounded),
+                    activeIcon: Icon(Icons.history_rounded, size: 24),
+                    label: 'History',
                   ),
-                  activeIcon: Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: Icon(Icons.history_rounded, size: 26),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.settings_rounded),
+                    activeIcon: Icon(Icons.settings_rounded, size: 24),
+                    label: 'Settings',
                   ),
-                  label: 'History',
-                ),
-                BottomNavigationBarItem(
-                  icon: Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: Icon(Icons.settings_rounded, size: 24),
-                  ),
-                  activeIcon: Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: Icon(Icons.settings_rounded, size: 26),
-                  ),
-                  label: 'Settings',
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

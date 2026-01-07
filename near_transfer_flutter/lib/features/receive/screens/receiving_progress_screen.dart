@@ -33,6 +33,7 @@ class _ReceivingProgressScreenState extends State<ReceivingProgressScreen> {
   }
 
   void _onOrchestratorUpdate() {
+    debugPrint('[PROGRESS SCREEN] Listener called - progress: ${widget.orchestrator.progress}, state: ${widget.orchestrator.state}');
     if (mounted) {
       setState(() {});
     }
